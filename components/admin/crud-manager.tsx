@@ -1,15 +1,16 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { DataTable } from "@/components/shared/data-table"
-import { ConfirmModal } from "@/components/shared/confirm-modal"
 import type { Column } from "@/components/shared/data-table"
-import { Plus, Trash2 } from "lucide-react"
+import { ConfirmModal } from "@/components/shared/confirm-modal"
+import { FormModal } from "@/components/shared/form-modal"
+import { TableToolbar } from "@/components/shared/table-toolbar"
+import { Pencil, Plus, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 
 type Field = {
@@ -18,7 +19,6 @@ type Field = {
   required?: boolean
   placeholder?: string
   type?: string
-  options?: { label: string; value: string }[]
 }
 
 type Props = {
@@ -27,7 +27,7 @@ type Props = {
   fields: Field[]
   columns: Column<Record<string, unknown>>[]
   entityName: string
-  extraData?: Record<string, unknown>
+  searchKeys?: string[]
 }
 
 export function CrudManager({
@@ -36,34 +36,69 @@ export function CrudManager({
   fields,
   columns,
   entityName,
-  extraData,
+  searchKeys = ["name", "code"],
 }: Props) {
   const router = useRouter()
   const [form, setForm] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [editTarget, setEditTarget] = useState<string | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [search, setSearch] = useState("")
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return items
+    const q = search.toLowerCase()
+    return items.filter((item) =>
+      searchKeys.some((k) => String(item[k] ?? "").toLowerCase().includes(q))
+    )
+  }, [items, search, searchKeys])
 
   function set(key: string, value: string) {
     setForm((prev) => ({ ...prev, [key]: value }))
   }
 
-  async function handleCreate(e: React.FormEvent) {
+  function openCreate() {
+    setForm({})
+    setEditTarget(null)
+    setModalOpen(true)
+  }
+
+  function openEdit(row: Record<string, unknown>) {
+    const prefill: Record<string, string> = {}
+    for (const f of fields) {
+      prefill[f.key] = String(row[f.key] ?? "")
+    }
+    setForm(prefill)
+    setEditTarget(row.id as string)
+    setModalOpen(true)
+  }
+
+  function closeModal() {
+    setModalOpen(false)
+    setEditTarget(null)
+    setForm({})
+  }
+
+  async function handleSubmit(e: { preventDefault(): void }) {
     e.preventDefault()
     setLoading(true)
     try {
-      const res = await fetch(endpoint, {
-        method: "POST",
+      const url = editTarget ? `${endpoint}/${editTarget}` : endpoint
+      const method = editTarget ? "PATCH" : "POST"
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, ...extraData }),
+        body: JSON.stringify(form),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
-      toast.success(`${entityName} created`)
-      setForm({})
+      toast.success(editTarget ? `${entityName} updated` : `${entityName} created`)
+      closeModal()
       router.refresh()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : `Failed to create ${entityName}`)
+      toast.error(err instanceof Error ? err.message : `Failed to save ${entityName}`)
     } finally {
       setLoading(false)
     }
@@ -88,62 +123,80 @@ export function CrudManager({
     }
   }
 
-  const columnsWithDelete: Column<Record<string, unknown>>[] = [
+  const columnsWithActions: Column<Record<string, unknown>>[] = [
     ...columns,
     {
       key: "actions",
       header: "",
       render: (row) => (
-        <Button
-          size="icon"
-          variant="ghost"
-          className="size-8 text-muted-foreground hover:text-destructive"
-          onClick={() => setDeleteTarget(row.id as string)}
-        >
-          <Trash2 className="size-3.5" />
-        </Button>
+        <div className="flex gap-1 justify-end">
+          <Button
+            size="icon"
+            variant="ghost"
+            className="size-8 text-muted-foreground hover:text-foreground"
+            onClick={() => openEdit(row)}
+          >
+            <Pencil className="size-3.5" />
+          </Button>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="size-8 text-muted-foreground hover:text-destructive"
+            onClick={() => setDeleteTarget(row.id as string)}
+          >
+            <Trash2 className="size-3.5" />
+          </Button>
+        </div>
       ),
     },
   ]
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Add {entityName}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleCreate} className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {fields.map((field) => (
-                <div key={field.key} className="space-y-2">
-                  <Label htmlFor={field.key}>{field.label}</Label>
-                  <Input
-                    id={field.key}
-                    type={field.type ?? "text"}
-                    value={form[field.key] ?? ""}
-                    onChange={(e) => set(field.key, e.target.value)}
-                    placeholder={field.placeholder}
-                    required={field.required}
-                  />
-                </div>
-              ))}
-            </div>
-            <Button type="submit" disabled={loading}>
-              <Plus className="size-4 mr-2" />
-              {loading ? "Adding…" : `Add ${entityName}`}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+    <div>
+      <TableToolbar
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder={`Search ${entityName.toLowerCase()}s…`}
+        resultCount={filtered.length}
+        totalCount={items.length}
+        action={
+          <Button size="sm" onClick={openCreate}>
+            <Plus className="size-4 mr-2" />
+            Add {entityName}
+          </Button>
+        }
+      />
 
       <DataTable
         keyField="id"
-        data={items}
-        columns={columnsWithDelete}
-        emptyTitle={`No ${entityName.toLowerCase()}s yet`}
-        emptyDescription={`Add your first ${entityName.toLowerCase()} above`}
+        data={filtered}
+        columns={columnsWithActions}
+        emptyTitle={search ? `No ${entityName.toLowerCase()}s match "${search}"` : `No ${entityName.toLowerCase()}s yet`}
+        emptyDescription={search ? "Try a different search term" : `Add your first ${entityName.toLowerCase()} using the button above`}
       />
+
+      <FormModal
+        open={modalOpen}
+        onOpenChange={(o) => { if (!o) closeModal(); else setModalOpen(true) }}
+        title={editTarget ? `Edit ${entityName}` : `Add ${entityName}`}
+        onSubmit={handleSubmit}
+        submitLabel={editTarget ? "Save Changes" : `Create ${entityName}`}
+        loading={loading}
+      >
+        {fields.map((field) => (
+          <div key={field.key} className="space-y-2">
+            <Label htmlFor={`crud-${field.key}`}>{field.label}</Label>
+            <Input
+              id={`crud-${field.key}`}
+              type={field.type ?? "text"}
+              value={form[field.key] ?? ""}
+              onChange={(e) => set(field.key, e.target.value)}
+              placeholder={field.placeholder}
+              required={field.required}
+            />
+          </div>
+        ))}
+      </FormModal>
 
       <ConfirmModal
         open={!!deleteTarget}

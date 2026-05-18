@@ -25,7 +25,7 @@ export function StudentProfileForm({
   const [contact, setContact] = useState(initialContact)
   const [loading, setLoading] = useState(false)
 
-  async function handleSave(e: React.FormEvent) {
+  async function handleSave(e: { preventDefault(): void }) {
     e.preventDefault()
     setLoading(true)
     try {

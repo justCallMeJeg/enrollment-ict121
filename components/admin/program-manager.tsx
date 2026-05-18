@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -12,10 +12,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { DataTable } from "@/components/shared/data-table"
 import { ConfirmModal } from "@/components/shared/confirm-modal"
-import { Plus, Trash2 } from "lucide-react"
+import { FormModal } from "@/components/shared/form-modal"
+import { TableToolbar } from "@/components/shared/table-toolbar"
+import { Pencil, Plus, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import type { Department } from "@/types"
 
@@ -28,6 +29,8 @@ type Program = {
   departments: { name: string; code: string } | null
 }
 
+const INIT_FORM = { name: "", code: "", department_id: "", years_to_complete: "4" }
+
 export function ProgramManager({
   programs,
   departments,
@@ -36,36 +39,71 @@ export function ProgramManager({
   departments: Pick<Department, "id" | "name" | "code">[]
 }) {
   const router = useRouter()
-  const [form, setForm] = useState({
-    name: "",
-    code: "",
-    department_id: "",
-    years_to_complete: "4",
-  })
+  const [form, setForm] = useState(INIT_FORM)
   const [loading, setLoading] = useState(false)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [editTarget, setEditTarget] = useState<string | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [search, setSearch] = useState("")
+  const [filterDept, setFilterDept] = useState("all")
+
+  const filtered = useMemo(() => {
+    return programs.filter((p) => {
+      const matchesSearch =
+        !search.trim() ||
+        p.name.toLowerCase().includes(search.toLowerCase()) ||
+        p.code.toLowerCase().includes(search.toLowerCase())
+      const matchesDept = filterDept === "all" || p.department_id === filterDept
+      return matchesSearch && matchesDept
+    })
+  }, [programs, search, filterDept])
 
   function set(key: string, value: string) {
     setForm((p) => ({ ...p, [key]: value }))
   }
 
-  async function handleCreate(e: React.FormEvent) {
+  function openCreate() {
+    setForm(INIT_FORM)
+    setEditTarget(null)
+    setModalOpen(true)
+  }
+
+  function openEdit(row: Program) {
+    setForm({
+      name: row.name,
+      code: row.code,
+      department_id: row.department_id,
+      years_to_complete: String(row.years_to_complete),
+    })
+    setEditTarget(row.id)
+    setModalOpen(true)
+  }
+
+  function closeModal() {
+    setModalOpen(false)
+    setEditTarget(null)
+    setForm(INIT_FORM)
+  }
+
+  async function handleSubmit(e: { preventDefault(): void }) {
     e.preventDefault()
     setLoading(true)
     try {
-      const res = await fetch("/api/admin/programs", {
-        method: "POST",
+      const url = editTarget ? `/api/admin/programs/${editTarget}` : "/api/admin/programs"
+      const method = editTarget ? "PATCH" : "POST"
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...form, years_to_complete: Number(form.years_to_complete) }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
-      toast.success("Program created")
-      setForm({ name: "", code: "", department_id: "", years_to_complete: "4" })
+      toast.success(editTarget ? "Program updated" : "Program created")
+      closeModal()
       router.refresh()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to create")
+      toast.error(err instanceof Error ? err.message : "Failed to save program")
     } finally {
       setLoading(false)
     }
@@ -84,97 +122,49 @@ export function ProgramManager({
       setDeleteTarget(null)
       router.refresh()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to delete")
+      toast.error(err instanceof Error ? err.message : "Failed to delete program")
     } finally {
       setDeleting(false)
     }
   }
 
+  const deptOptions = departments.map((d) => ({ label: `${d.code} — ${d.name}`, value: d.id }))
+
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Add Program</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleCreate} className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Department</Label>
-                <Select
-                  value={form.department_id}
-                  onValueChange={(v) => set("department_id", v)}
-                  required
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select department" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {departments.map((d) => (
-                      <SelectItem key={d.id} value={d.id}>
-                        {d.code} — {d.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="prog-name">Program Name</Label>
-                <Input
-                  id="prog-name"
-                  value={form.name}
-                  onChange={(e) => set("name", e.target.value)}
-                  placeholder="e.g. Bachelor of Science in Computer Science"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="prog-code">Code</Label>
-                <Input
-                  id="prog-code"
-                  value={form.code}
-                  onChange={(e) => set("code", e.target.value)}
-                  placeholder="e.g. BSCS"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Years to Complete</Label>
-                <Select
-                  value={form.years_to_complete}
-                  onValueChange={(v) => set("years_to_complete", v)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {[2, 3, 4, 5, 6].map((y) => (
-                      <SelectItem key={y} value={String(y)}>
-                        {y} years
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <Button type="submit" disabled={loading}>
-              <Plus className="size-4 mr-2" />
-              {loading ? "Adding…" : "Add Program"}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+    <div>
+      <TableToolbar
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search programs…"
+        filters={[
+          {
+            key: "department",
+            placeholder: "All Departments",
+            options: deptOptions,
+            value: filterDept,
+            onChange: setFilterDept,
+          },
+        ]}
+        resultCount={filtered.length}
+        totalCount={programs.length}
+        action={
+          <Button size="sm" onClick={openCreate}>
+            <Plus className="size-4 mr-2" />
+            Add Program
+          </Button>
+        }
+      />
 
       <DataTable
         keyField="id"
-        data={programs as unknown as Record<string, unknown>[]}
+        data={filtered as unknown as Record<string, unknown>[]}
         columns={[
           {
             key: "department",
             header: "Department",
             render: (row) => {
               const p = row as unknown as Program
-              return p.departments ? `${p.departments.code}` : "—"
+              return p.departments?.code ?? "—"
             },
           },
           { key: "name", header: "Program Name" },
@@ -183,21 +173,94 @@ export function ProgramManager({
           {
             key: "actions",
             header: "",
-            render: (row) => (
-              <Button
-                size="icon"
-                variant="ghost"
-                className="size-8 text-muted-foreground hover:text-destructive"
-                onClick={() => setDeleteTarget((row as unknown as Program).id)}
-              >
-                <Trash2 className="size-3.5" />
-              </Button>
-            ),
+            render: (row) => {
+              const p = row as unknown as Program
+              return (
+                <div className="flex gap-1 justify-end">
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="size-8 text-muted-foreground hover:text-foreground"
+                    onClick={() => openEdit(p)}
+                  >
+                    <Pencil className="size-3.5" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="size-8 text-muted-foreground hover:text-destructive"
+                    onClick={() => setDeleteTarget(p.id)}
+                  >
+                    <Trash2 className="size-3.5" />
+                  </Button>
+                </div>
+              )
+            },
           },
         ]}
-        emptyTitle="No programs yet"
-        emptyDescription="Add your first program above"
+        emptyTitle={search || filterDept !== "all" ? "No programs match your filters" : "No programs yet"}
+        emptyDescription={search || filterDept !== "all" ? "Try adjusting your search or filter" : "Add your first program using the button above"}
       />
+
+      <FormModal
+        open={modalOpen}
+        onOpenChange={(o) => { if (!o) closeModal(); else setModalOpen(true) }}
+        title={editTarget ? "Edit Program" : "Add Program"}
+        onSubmit={handleSubmit}
+        submitLabel={editTarget ? "Save Changes" : "Create Program"}
+        loading={loading}
+      >
+        <div className="space-y-2">
+          <Label>Department</Label>
+          <Select value={form.department_id} onValueChange={(v) => set("department_id", v)} required>
+            <SelectTrigger>
+              <SelectValue placeholder="Select a department" />
+            </SelectTrigger>
+            <SelectContent>
+              {departments.map((d) => (
+                <SelectItem key={d.id} value={d.id}>
+                  {d.code} — {d.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="prog-name">Program Name</Label>
+          <Input
+            id="prog-name"
+            value={form.name}
+            onChange={(e) => set("name", e.target.value)}
+            placeholder="e.g. Bachelor of Science in Computer Science"
+            required
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="prog-code">Code</Label>
+          <Input
+            id="prog-code"
+            value={form.code}
+            onChange={(e) => set("code", e.target.value)}
+            placeholder="e.g. BSCS"
+            required
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Years to Complete</Label>
+          <Select value={form.years_to_complete} onValueChange={(v) => set("years_to_complete", v)}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {[2, 3, 4, 5, 6].map((y) => (
+                <SelectItem key={y} value={String(y)}>
+                  {y} years
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </FormModal>
 
       <ConfirmModal
         open={!!deleteTarget}

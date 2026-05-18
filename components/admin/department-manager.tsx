@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -12,10 +12,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { DataTable } from "@/components/shared/data-table"
 import { ConfirmModal } from "@/components/shared/confirm-modal"
-import { Plus, Trash2 } from "lucide-react"
+import { FormModal } from "@/components/shared/form-modal"
+import { TableToolbar } from "@/components/shared/table-toolbar"
+import { Pencil, Plus, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import type { College } from "@/types"
 
@@ -27,6 +28,8 @@ type Department = {
   colleges: { name: string; code: string } | null
 }
 
+const INIT_FORM = { name: "", code: "", college_id: "" }
+
 export function DepartmentManager({
   departments,
   colleges,
@@ -35,31 +38,66 @@ export function DepartmentManager({
   colleges: Pick<College, "id" | "name" | "code">[]
 }) {
   const router = useRouter()
-  const [name, setName] = useState("")
-  const [code, setCode] = useState("")
-  const [collegeId, setCollegeId] = useState("")
+  const [form, setForm] = useState(INIT_FORM)
   const [loading, setLoading] = useState(false)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [editTarget, setEditTarget] = useState<string | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [search, setSearch] = useState("")
+  const [filterCollege, setFilterCollege] = useState("all")
 
-  async function handleCreate(e: React.FormEvent) {
+  const filtered = useMemo(() => {
+    return departments.filter((d) => {
+      const matchesSearch =
+        !search.trim() ||
+        d.name.toLowerCase().includes(search.toLowerCase()) ||
+        d.code.toLowerCase().includes(search.toLowerCase())
+      const matchesCollege = filterCollege === "all" || d.college_id === filterCollege
+      return matchesSearch && matchesCollege
+    })
+  }, [departments, search, filterCollege])
+
+  function set(key: string, value: string) {
+    setForm((p) => ({ ...p, [key]: value }))
+  }
+
+  function openCreate() {
+    setForm(INIT_FORM)
+    setEditTarget(null)
+    setModalOpen(true)
+  }
+
+  function openEdit(row: Department) {
+    setForm({ name: row.name, code: row.code, college_id: row.college_id })
+    setEditTarget(row.id)
+    setModalOpen(true)
+  }
+
+  function closeModal() {
+    setModalOpen(false)
+    setEditTarget(null)
+    setForm(INIT_FORM)
+  }
+
+  async function handleSubmit(e: { preventDefault(): void }) {
     e.preventDefault()
     setLoading(true)
     try {
-      const res = await fetch("/api/admin/departments", {
-        method: "POST",
+      const url = editTarget ? `/api/admin/departments/${editTarget}` : "/api/admin/departments"
+      const method = editTarget ? "PATCH" : "POST"
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, code, college_id: collegeId }),
+        body: JSON.stringify(form),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
-      toast.success("Department created")
-      setName("")
-      setCode("")
-      setCollegeId("")
+      toast.success(editTarget ? "Department updated" : "Department created")
+      closeModal()
       router.refresh()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to create")
+      toast.error(err instanceof Error ? err.message : "Failed to save department")
     } finally {
       setLoading(false)
     }
@@ -69,9 +107,7 @@ export function DepartmentManager({
     if (!deleteTarget) return
     setDeleting(true)
     try {
-      const res = await fetch(`/api/admin/departments/${deleteTarget}`, {
-        method: "DELETE",
-      })
+      const res = await fetch(`/api/admin/departments/${deleteTarget}`, { method: "DELETE" })
       if (!res.ok) {
         const data = await res.json()
         throw new Error(data.error)
@@ -80,67 +116,42 @@ export function DepartmentManager({
       setDeleteTarget(null)
       router.refresh()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to delete")
+      toast.error(err instanceof Error ? err.message : "Failed to delete department")
     } finally {
       setDeleting(false)
     }
   }
 
+  const collegeOptions = colleges.map((c) => ({ label: `${c.code} — ${c.name}`, value: c.id }))
+
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Add Department</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleCreate} className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label>College</Label>
-                <Select value={collegeId} onValueChange={setCollegeId} required>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select college" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {colleges.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.code} — {c.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="dept-name">Department Name</Label>
-                <Input
-                  id="dept-name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="dept-code">Code</Label>
-                <Input
-                  id="dept-code"
-                  value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                  placeholder="e.g. DCIT"
-                  required
-                />
-              </div>
-            </div>
-            <Button type="submit" disabled={loading}>
-              <Plus className="size-4 mr-2" />
-              {loading ? "Adding…" : "Add Department"}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+    <div>
+      <TableToolbar
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search departments…"
+        filters={[
+          {
+            key: "college",
+            placeholder: "All Colleges",
+            options: collegeOptions,
+            value: filterCollege,
+            onChange: setFilterCollege,
+          },
+        ]}
+        resultCount={filtered.length}
+        totalCount={departments.length}
+        action={
+          <Button size="sm" onClick={openCreate}>
+            <Plus className="size-4 mr-2" />
+            Add Department
+          </Button>
+        }
+      />
 
       <DataTable
         keyField="id"
-        data={departments as unknown as Record<string, unknown>[]}
+        data={filtered as unknown as Record<string, unknown>[]}
         columns={[
           {
             key: "college",
@@ -155,21 +166,79 @@ export function DepartmentManager({
           {
             key: "actions",
             header: "",
-            render: (row) => (
-              <Button
-                size="icon"
-                variant="ghost"
-                className="size-8 text-muted-foreground hover:text-destructive"
-                onClick={() => setDeleteTarget((row as unknown as Department).id)}
-              >
-                <Trash2 className="size-3.5" />
-              </Button>
-            ),
+            render: (row) => {
+              const d = row as unknown as Department
+              return (
+                <div className="flex gap-1 justify-end">
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="size-8 text-muted-foreground hover:text-foreground"
+                    onClick={() => openEdit(d)}
+                  >
+                    <Pencil className="size-3.5" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="size-8 text-muted-foreground hover:text-destructive"
+                    onClick={() => setDeleteTarget(d.id)}
+                  >
+                    <Trash2 className="size-3.5" />
+                  </Button>
+                </div>
+              )
+            },
           },
         ]}
-        emptyTitle="No departments yet"
-        emptyDescription="Add your first department above"
+        emptyTitle={search || filterCollege !== "all" ? "No departments match your filters" : "No departments yet"}
+        emptyDescription={search || filterCollege !== "all" ? "Try adjusting your search or filter" : "Add your first department using the button above"}
       />
+
+      <FormModal
+        open={modalOpen}
+        onOpenChange={(o) => { if (!o) closeModal(); else setModalOpen(true) }}
+        title={editTarget ? "Edit Department" : "Add Department"}
+        onSubmit={handleSubmit}
+        submitLabel={editTarget ? "Save Changes" : "Create Department"}
+        loading={loading}
+      >
+        <div className="space-y-2">
+          <Label>College</Label>
+          <Select value={form.college_id} onValueChange={(v) => set("college_id", v)} required>
+            <SelectTrigger>
+              <SelectValue placeholder="Select a college" />
+            </SelectTrigger>
+            <SelectContent>
+              {colleges.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.code} — {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="dept-name">Department Name</Label>
+          <Input
+            id="dept-name"
+            value={form.name}
+            onChange={(e) => set("name", e.target.value)}
+            placeholder="e.g. Department of Computer and Information Technology"
+            required
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="dept-code">Code</Label>
+          <Input
+            id="dept-code"
+            value={form.code}
+            onChange={(e) => set("code", e.target.value)}
+            placeholder="e.g. DCIT"
+            required
+          />
+        </div>
+      </FormModal>
 
       <ConfirmModal
         open={!!deleteTarget}
