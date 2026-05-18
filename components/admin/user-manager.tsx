@@ -14,9 +14,10 @@ import {
 } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { DataTable } from "@/components/shared/data-table"
+import { ConfirmModal } from "@/components/shared/confirm-modal"
 import { FormModal } from "@/components/shared/form-modal"
 import { TableToolbar } from "@/components/shared/table-toolbar"
-import { Pencil, Plus } from "lucide-react"
+import { Pencil, Plus, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import type { Program } from "@/types"
 
@@ -56,6 +57,8 @@ export function UserManager({
   const [loading, setLoading] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<UserRow | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<UserRow | null>(null)
+  const [deleting, setDeleting] = useState(false)
   const [search, setSearch] = useState("")
   const [filterRole, setFilterRole] = useState("all")
 
@@ -136,6 +139,23 @@ export function UserManager({
     }
   }
 
+  async function handleDelete() {
+    if (!deleteTarget) return
+    setDeleting(true)
+    try {
+      const res = await fetch(`/api/admin/users/${deleteTarget.id}`, { method: "DELETE" })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      toast.success("User account deleted")
+      setDeleteTarget(null)
+      router.refresh()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete user")
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   const hasFilters = search || filterRole !== "all"
 
   return (
@@ -198,6 +218,14 @@ export function UserManager({
                     onClick={() => openEdit(u)}
                   >
                     <Pencil className="size-3.5" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="size-8 text-muted-foreground hover:text-destructive"
+                    onClick={() => setDeleteTarget(u)}
+                  >
+                    <Trash2 className="size-3.5" />
                   </Button>
                 </div>
               )
@@ -357,6 +385,16 @@ export function UserManager({
           </>
         )}
       </FormModal>
+
+      <ConfirmModal
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="Delete User Account"
+        description={`Are you sure you want to delete ${deleteTarget?.name ?? "this user"}? All their enrollments and grades will also be permanently removed.`}
+        confirmLabel="Delete"
+        onConfirm={handleDelete}
+        loading={deleting}
+      />
     </div>
   )
 }

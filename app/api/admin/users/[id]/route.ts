@@ -2,6 +2,38 @@ import { NextRequest, NextResponse } from "next/server"
 import { getSupabaseServerClient } from "@/lib/supabase/server"
 import { hashPassword } from "@/lib/auth/password"
 
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params
+  const currentUserId = request.headers.get("x-user-id")
+
+  if (id === currentUserId) {
+    return NextResponse.json({ error: "You cannot delete your own account" }, { status: 400 })
+  }
+
+  const supabase = await getSupabaseServerClient()
+
+  const { data: user, error: fetchError } = await supabase
+    .from("users")
+    .select("role")
+    .eq("id", id)
+    .single()
+
+  if (fetchError || !user) {
+    return NextResponse.json({ error: "User not found" }, { status: 404 })
+  }
+
+  if (user.role === "admin") {
+    return NextResponse.json({ error: "Admin accounts cannot be deleted" }, { status: 403 })
+  }
+
+  const { error } = await supabase.from("users").delete().eq("id", id)
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ ok: true })
+}
+
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
