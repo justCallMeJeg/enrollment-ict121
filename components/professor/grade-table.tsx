@@ -13,6 +13,8 @@ import {
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { ConfirmModal } from "@/components/shared/confirm-modal"
+import { IconButton } from "@/components/shared/icon-button"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
 import { UserMinus } from "lucide-react"
@@ -149,14 +151,19 @@ export function GradeTable({ enrollments }: { enrollments: Enrollment[] }) {
                           }))
                         }
                       />
-                      <Button
-                        size="sm"
-                        className="h-8"
-                        disabled={gradeState?.saving}
-                        onClick={() => saveGrade(e.id)}
-                      >
-                        {gradeState?.saving ? "Saving…" : "Save"}
-                      </Button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="sm"
+                            className="h-8"
+                            disabled={gradeState?.saving}
+                            onClick={() => saveGrade(e.id)}
+                          >
+                            {gradeState?.saving ? "Saving…" : "Save"}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent sideOffset={4}>Save grade for this student</TooltipContent>
+                      </Tooltip>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -175,14 +182,9 @@ export function GradeTable({ enrollments }: { enrollments: Enrollment[] }) {
                     )}
                   </TableCell>
                   <TableCell>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="size-8 text-muted-foreground hover:text-destructive"
-                      onClick={() => setDropTarget(e)}
-                    >
+                    <IconButton tooltip="Drop student" className="hover:text-destructive" onClick={() => setDropTarget(e)}>
                       <UserMinus className="size-3.5" />
-                    </Button>
+                    </IconButton>
                   </TableCell>
                 </TableRow>
               )

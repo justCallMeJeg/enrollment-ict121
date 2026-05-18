@@ -18,6 +18,7 @@ import { ConfirmModal } from "@/components/shared/confirm-modal"
 import { FormModal } from "@/components/shared/form-modal"
 import { TableToolbar } from "@/components/shared/table-toolbar"
 import { Pencil, Plus, Trash2 } from "lucide-react"
+import { IconButton } from "@/components/shared/icon-button"
 import { toast } from "sonner"
 import type { Program } from "@/types"
 
@@ -211,22 +212,12 @@ export function UserManager({
               const u = row as unknown as UserRow
               return (
                 <div className="flex gap-1 justify-end">
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="size-8 text-muted-foreground hover:text-foreground"
-                    onClick={() => openEdit(u)}
-                  >
+                  <IconButton tooltip="Edit" className="hover:text-foreground" onClick={() => openEdit(u)}>
                     <Pencil className="size-3.5" />
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="size-8 text-muted-foreground hover:text-destructive"
-                    onClick={() => setDeleteTarget(u)}
-                  >
+                  </IconButton>
+                  <IconButton tooltip="Delete account" className="hover:text-destructive" onClick={() => setDeleteTarget(u)}>
                     <Trash2 className="size-3.5" />
-                  </Button>
+                  </IconButton>
                 </div>
               )
             },

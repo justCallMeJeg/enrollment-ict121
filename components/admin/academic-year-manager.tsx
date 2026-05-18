@@ -12,6 +12,8 @@ import { TableToolbar } from "@/components/shared/table-toolbar"
 import { DataTable } from "@/components/shared/data-table"
 import type { AcademicYear } from "@/types"
 import { Pencil, Plus, Zap } from "lucide-react"
+import { IconButton } from "@/components/shared/icon-button"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { toast } from "sonner"
 
 const STATUS_BADGE: Record<string, "default" | "secondary" | "outline"> = {
@@ -128,15 +130,26 @@ export function AcademicYearManager({ years }: { years: AcademicYear[] }) {
         resultCount={filtered.length}
         totalCount={years.length}
         action={
-          <Button
-            size="sm"
-            onClick={openCreate}
-            disabled={!!upcoming}
-            title={upcoming ? "Activate the upcoming year before creating another" : undefined}
-          >
-            <Plus className="size-4 mr-2" />
-            Add Academic Year
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              {upcoming ? (
+                <span className="inline-flex" tabIndex={0}>
+                  <Button size="sm" disabled>
+                    <Plus className="size-4 mr-2" />
+                    Add Academic Year
+                  </Button>
+                </span>
+              ) : (
+                <Button size="sm" onClick={openCreate}>
+                  <Plus className="size-4 mr-2" />
+                  Add Academic Year
+                </Button>
+              )}
+            </TooltipTrigger>
+            <TooltipContent sideOffset={4}>
+              {upcoming ? "Activate the upcoming year before creating another" : "Create a new upcoming academic year"}
+            </TooltipContent>
+          </Tooltip>
         }
       />
 
@@ -163,24 +176,26 @@ export function AcademicYearManager({ years }: { years: AcademicYear[] }) {
             render: (row) => {
               const year = row as unknown as AcademicYear
               return (
-                <div className="flex gap-1 justify-end">
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="size-8 text-muted-foreground hover:text-foreground"
-                    onClick={() => openEdit(year)}
-                  >
+                <div className="flex gap-1 justify-end items-center">
+                  <IconButton tooltip="Edit label" className="hover:text-foreground" onClick={() => openEdit(year)}>
                     <Pencil className="size-3.5" />
-                  </Button>
+                  </IconButton>
                   {year.status === "upcoming" && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setActivateTarget(year)}
-                    >
-                      <Zap className="size-3 mr-1" />
-                      Activate
-                    </Button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setActivateTarget(year)}
+                        >
+                          <Zap className="size-3 mr-1" />
+                          Activate
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent sideOffset={4}>
+                        End the current active year and convert pre-enrollments to enrollments
+                      </TooltipContent>
+                    </Tooltip>
                   )}
                 </div>
               )

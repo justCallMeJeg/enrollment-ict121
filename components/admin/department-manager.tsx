@@ -17,6 +17,7 @@ import { ConfirmModal } from "@/components/shared/confirm-modal"
 import { FormModal } from "@/components/shared/form-modal"
 import { TableToolbar } from "@/components/shared/table-toolbar"
 import { Pencil, Plus, Trash2 } from "lucide-react"
+import { IconButton } from "@/components/shared/icon-button"
 import { toast } from "sonner"
 import type { College } from "@/types"
 
@@ -170,22 +171,12 @@ export function DepartmentManager({
               const d = row as unknown as Department
               return (
                 <div className="flex gap-1 justify-end">
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="size-8 text-muted-foreground hover:text-foreground"
-                    onClick={() => openEdit(d)}
-                  >
+                  <IconButton tooltip="Edit" className="hover:text-foreground" onClick={() => openEdit(d)}>
                     <Pencil className="size-3.5" />
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="size-8 text-muted-foreground hover:text-destructive"
-                    onClick={() => setDeleteTarget(d.id)}
-                  >
+                  </IconButton>
+                  <IconButton tooltip="Delete" className="hover:text-destructive" onClick={() => setDeleteTarget(d.id)}>
                     <Trash2 className="size-3.5" />
-                  </Button>
+                  </IconButton>
                 </div>
               )
             },

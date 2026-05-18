@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/select"
 import { Search, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 
 export type FilterConfig = {
   key: string
@@ -76,15 +77,20 @@ export function TableToolbar({
         ))}
 
         {hasActiveFilters && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-9 px-2 text-muted-foreground"
-            onClick={clearAll}
-          >
-            <X className="size-3.5 mr-1" />
-            Clear
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-9 px-2 text-muted-foreground"
+                onClick={clearAll}
+              >
+                <X className="size-3.5 mr-1" />
+                Clear
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent sideOffset={4}>Clear all active filters</TooltipContent>
+          </Tooltip>
         )}
 
         <div className="flex-1" />
