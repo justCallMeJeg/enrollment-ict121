@@ -225,25 +225,27 @@ export function ProgramManager({
             </SelectContent>
           </Select>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="prog-name">Program Name</Label>
-          <Input
-            id="prog-name"
-            value={form.name}
-            onChange={(e) => set("name", e.target.value)}
-            placeholder="e.g. Bachelor of Science in Computer Science"
-            required
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="prog-code">Code</Label>
-          <Input
-            id="prog-code"
-            value={form.code}
-            onChange={(e) => set("code", e.target.value)}
-            placeholder="e.g. BSCS"
-            required
-          />
+        <div className="grid grid-cols-[1fr_auto] gap-4 items-start">
+          <div className="space-y-2">
+            <Label htmlFor="prog-name">Program Name</Label>
+            <Input
+              id="prog-name"
+              value={form.name}
+              onChange={(e) => set("name", e.target.value)}
+              placeholder="e.g. Bachelor of Science in Computer Science"
+              required
+            />
+          </div>
+          <div className="space-y-2 w-24">
+            <Label htmlFor="prog-code">Code</Label>
+            <Input
+              id="prog-code"
+              value={form.code}
+              onChange={(e) => set("code", e.target.value)}
+              placeholder="e.g. BSCS"
+              required
+            />
+          </div>
         </div>
         <div className="space-y-2">
           <Label>Years to Complete</Label>

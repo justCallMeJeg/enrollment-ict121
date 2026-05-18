@@ -215,8 +215,9 @@ export function UserManager({
         onSubmit={handleSubmit}
         submitLabel={editTarget ? "Save Changes" : "Create Account"}
         loading={loading}
-        scrollable
+        size="lg"
       >
+        {/* Role row */}
         <div className="space-y-2">
           <Label>Role</Label>
           {editTarget ? (
@@ -235,72 +236,108 @@ export function UserManager({
             </Select>
           )}
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="um-name">Full Name</Label>
-          <Input
-            id="um-name"
-            value={form.name}
-            onChange={(e) => set("name", e.target.value)}
-            required
-          />
-        </div>
-        {!editTarget && (
+
+        {/* Name + ID (create) or Name full-width (edit) */}
+        {!editTarget ? (
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="um-name">Full Name</Label>
+              <Input
+                id="um-name"
+                value={form.name}
+                onChange={(e) => set("name", e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="um-id">{role === "student" ? "Student ID" : "Faculty ID"}</Label>
+              <Input
+                id="um-id"
+                value={form.id_number}
+                onChange={(e) => set("id_number", e.target.value)}
+                placeholder={role === "student" ? "2024-00001" : "FAC-2024-001"}
+                required
+              />
+            </div>
+          </div>
+        ) : (
           <div className="space-y-2">
-            <Label htmlFor="um-id">{role === "student" ? "Student ID" : "Faculty ID"}</Label>
+            <Label htmlFor="um-name">Full Name</Label>
             <Input
-              id="um-id"
-              value={form.id_number}
-              onChange={(e) => set("id_number", e.target.value)}
-              placeholder={role === "student" ? "2024-00001" : "FAC-2024-001"}
+              id="um-name"
+              value={form.name}
+              onChange={(e) => set("name", e.target.value)}
               required
             />
           </div>
         )}
-        <div className="space-y-2">
-          <Label htmlFor="um-email">Email</Label>
-          <Input
-            id="um-email"
-            type="email"
-            value={form.email}
-            onChange={(e) => set("email", e.target.value)}
-            required
-          />
+
+        {/* Email + Password */}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="um-email">Email</Label>
+            <Input
+              id="um-email"
+              type="email"
+              value={form.email}
+              onChange={(e) => set("email", e.target.value)}
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="um-password">
+              {editTarget ? "Password (optional)" : "Password"}
+            </Label>
+            <Input
+              id="um-password"
+              type="password"
+              value={form.password}
+              onChange={(e) => set("password", e.target.value)}
+              required={!editTarget}
+              minLength={editTarget ? undefined : 8}
+              placeholder={editTarget ? "Leave blank to keep current" : undefined}
+            />
+          </div>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="um-password">
-            {editTarget ? "Password (leave blank to keep current)" : "Password"}
-          </Label>
-          <Input
-            id="um-password"
-            type="password"
-            value={form.password}
-            onChange={(e) => set("password", e.target.value)}
-            required={!editTarget}
-            minLength={editTarget ? undefined : 8}
-          />
-        </div>
+
+        {/* Contact Number */}
         <div className="space-y-2">
           <Label htmlFor="um-contact">Contact Number</Label>
           <Input
             id="um-contact"
             value={form.contact_number}
             onChange={(e) => set("contact_number", e.target.value)}
+            placeholder="e.g. 09123456789"
           />
         </div>
+
+        {/* Student-only fields */}
         {role === "student" && (
           <>
-            <div className="space-y-2">
-              <Label>Year Level</Label>
-              <Select value={form.year_level} onValueChange={(v) => set("year_level", v)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {[1, 2, 3, 4, 5, 6].map((y) => (
-                    <SelectItem key={y} value={String(y)}>Year {y}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Year Level</Label>
+                <Select value={form.year_level} onValueChange={(v) => set("year_level", v)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[1, 2, 3, 4, 5, 6].map((y) => (
+                      <SelectItem key={y} value={String(y)}>Year {y}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="um-section">Section</Label>
+                <Input
+                  id="um-section"
+                  value={form.section}
+                  onChange={(e) => set("section", e.target.value)}
+                  placeholder="e.g. A, BSCS-3A"
+                  required
+                />
+              </div>
             </div>
             <div className="space-y-2">
               <Label>Program</Label>
@@ -316,16 +353,6 @@ export function UserManager({
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="um-section">Section</Label>
-              <Input
-                id="um-section"
-                value={form.section}
-                onChange={(e) => set("section", e.target.value)}
-                placeholder="e.g. A, BSCS-3A"
-                required
-              />
             </div>
           </>
         )}

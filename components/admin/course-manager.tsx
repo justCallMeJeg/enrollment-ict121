@@ -288,98 +288,104 @@ export function CourseManager({
         onSubmit={handleSubmit}
         submitLabel={editTarget ? "Save Changes" : "Create Course"}
         loading={loading}
-        scrollable
+        size="lg"
       >
-        <div className="space-y-2">
-          <Label htmlFor="course_code">Course Code</Label>
-          <Input
-            id="course_code"
-            value={form.course_code}
-            onChange={(e) => set("course_code", e.target.value)}
-            placeholder="e.g. CS101"
-            required
-          />
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="course_code">Course Code</Label>
+            <Input
+              id="course_code"
+              value={form.course_code}
+              onChange={(e) => set("course_code", e.target.value)}
+              placeholder="e.g. CS101"
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="course_name">Course Name</Label>
+            <Input
+              id="course_name"
+              value={form.name}
+              onChange={(e) => set("name", e.target.value)}
+              placeholder="e.g. Introduction to Computing"
+              required
+            />
+          </div>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="course_name">Course Name</Label>
-          <Input
-            id="course_name"
-            value={form.name}
-            onChange={(e) => set("name", e.target.value)}
-            placeholder="e.g. Introduction to Computing"
-            required
-          />
-        </div>
-        <div className="space-y-2">
-          <Label>Program</Label>
-          <Select value={form.program_id} onValueChange={(v) => set("program_id", v)} required>
-            <SelectTrigger>
-              <SelectValue placeholder="Select program" />
-            </SelectTrigger>
-            <SelectContent>
-              {programs.map((p) => (
-                <SelectItem key={p.id} value={p.id}>
-                  {p.code} — {p.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <Label>Professor</Label>
-          <Select value={form.professor_id} onValueChange={(v) => set("professor_id", v)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select professor (optional)" />
-            </SelectTrigger>
-            <SelectContent>
-              {professors.map((p) => {
-                const pUser = Array.isArray(p.users) ? p.users[0] : p.users
-                return (
-                  <SelectItem key={p.user_id} value={p.user_id}>
-                    {pUser?.name ?? p.faculty_id}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>Program</Label>
+            <Select value={form.program_id} onValueChange={(v) => set("program_id", v)} required>
+              <SelectTrigger>
+                <SelectValue placeholder="Select program" />
+              </SelectTrigger>
+              <SelectContent>
+                {programs.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.code} — {p.name}
                   </SelectItem>
-                )
-              })}
-            </SelectContent>
-          </Select>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Professor</Label>
+            <Select value={form.professor_id} onValueChange={(v) => set("professor_id", v)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select professor (optional)" />
+              </SelectTrigger>
+              <SelectContent>
+                {professors.map((p) => {
+                  const pUser = Array.isArray(p.users) ? p.users[0] : p.users
+                  return (
+                    <SelectItem key={p.user_id} value={p.user_id}>
+                      {pUser?.name ?? p.faculty_id}
+                    </SelectItem>
+                  )
+                })}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-        <div className="space-y-2">
-          <Label>Semester</Label>
-          <Select value={form.semester} onValueChange={(v) => set("semester", v)}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {SEMESTERS.map((s) => (
-                <SelectItem key={s} value={s}>{s} Semester</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <Label>Year Level</Label>
-          <Select value={form.year_level} onValueChange={(v) => set("year_level", v)}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {[1, 2, 3, 4, 5, 6].map((y) => (
-                <SelectItem key={y} value={String(y)}>Year {y}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="units">Units</Label>
-          <Input
-            id="units"
-            type="number"
-            min={1}
-            max={9}
-            value={form.units}
-            onChange={(e) => set("units", e.target.value)}
-            required
-          />
+        <div className="grid grid-cols-3 gap-4">
+          <div className="space-y-2">
+            <Label>Semester</Label>
+            <Select value={form.semester} onValueChange={(v) => set("semester", v)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {SEMESTERS.map((s) => (
+                  <SelectItem key={s} value={s}>{s} Semester</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Year Level</Label>
+            <Select value={form.year_level} onValueChange={(v) => set("year_level", v)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {[1, 2, 3, 4, 5, 6].map((y) => (
+                  <SelectItem key={y} value={String(y)}>Year {y}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="units">Units</Label>
+            <Input
+              id="units"
+              type="number"
+              min={1}
+              max={9}
+              value={form.units}
+              onChange={(e) => set("units", e.target.value)}
+              required
+            />
+          </div>
         </div>
         <div className="space-y-2">
           <Label>Prerequisite Course</Label>

@@ -1,15 +1,14 @@
 "use client"
 
+import { cn } from "@/lib/utils"
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { ScrollArea } from "@/components/ui/scroll-area"
 
 type Props = {
   open: boolean
@@ -20,8 +19,8 @@ type Props = {
   submitLabel?: string
   loading?: boolean
   children: React.ReactNode
-  /** Use for large forms that might overflow on small screens */
-  scrollable?: boolean
+  /** "lg" widens the modal to max-w-2xl for forms with many fields */
+  size?: "md" | "lg"
 }
 
 export function FormModal({
@@ -33,31 +32,33 @@ export function FormModal({
   submitLabel = "Save",
   loading = false,
   children,
-  scrollable = false,
+  size = "md",
 }: Props) {
   return (
     <Dialog open={open} onOpenChange={(o) => !loading && onOpenChange(o)}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
+      <DialogContent
+        className={cn(
+          "flex flex-col gap-0 max-h-[90vh] overflow-hidden p-0",
+          size === "lg" ? "sm:max-w-2xl" : "sm:max-w-lg"
+        )}
+      >
+        <DialogHeader className="shrink-0 px-6 pt-6 pb-4">
           <DialogTitle>{title}</DialogTitle>
           {description && (
             <DialogDescription>{description}</DialogDescription>
           )}
         </DialogHeader>
+
         <form
           onSubmit={onSubmit}
-          // Stop propagation so nested forms don't conflict
           onClick={(e) => e.stopPropagation()}
+          className="flex flex-col min-h-0 flex-1"
         >
-          {scrollable ? (
-            <ScrollArea className="max-h-[60vh] pr-1">
-              <div className="space-y-4 py-2">{children}</div>
-            </ScrollArea>
-          ) : (
+          <div className="flex-1 overflow-y-auto px-6 pb-2">
             <div className="space-y-4 py-2">{children}</div>
-          )}
+          </div>
 
-          <DialogFooter className="mt-4">
+          <div className="shrink-0 flex justify-end gap-3 px-6 py-4 border-t">
             <Button
               type="button"
               variant="outline"
@@ -69,7 +70,7 @@ export function FormModal({
             <Button type="submit" disabled={loading}>
               {loading ? "Saving…" : submitLabel}
             </Button>
-          </DialogFooter>
+          </div>
         </form>
       </DialogContent>
     </Dialog>

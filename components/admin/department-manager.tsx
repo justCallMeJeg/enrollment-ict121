@@ -218,25 +218,27 @@ export function DepartmentManager({
             </SelectContent>
           </Select>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="dept-name">Department Name</Label>
-          <Input
-            id="dept-name"
-            value={form.name}
-            onChange={(e) => set("name", e.target.value)}
-            placeholder="e.g. Department of Computer and Information Technology"
-            required
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="dept-code">Code</Label>
-          <Input
-            id="dept-code"
-            value={form.code}
-            onChange={(e) => set("code", e.target.value)}
-            placeholder="e.g. DCIT"
-            required
-          />
+        <div className="grid grid-cols-[1fr_auto] gap-4 items-start">
+          <div className="space-y-2">
+            <Label htmlFor="dept-name">Department Name</Label>
+            <Input
+              id="dept-name"
+              value={form.name}
+              onChange={(e) => set("name", e.target.value)}
+              placeholder="e.g. Department of Computer and Information Technology"
+              required
+            />
+          </div>
+          <div className="space-y-2 w-28">
+            <Label htmlFor="dept-code">Code</Label>
+            <Input
+              id="dept-code"
+              value={form.code}
+              onChange={(e) => set("code", e.target.value)}
+              placeholder="e.g. DCIT"
+              required
+            />
+          </div>
         </div>
       </FormModal>
 
