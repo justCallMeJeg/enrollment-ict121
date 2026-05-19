@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { useRef, useState, useEffect } from "react"
 import { cn } from "@/lib/utils"
 import type { UserRole } from "@/types"
 import {
@@ -15,7 +16,20 @@ import {
   School,
   Building2,
   BookMarked,
+  PanelLeft,
+  Check,
 } from "lucide-react"
+import { useSidebar } from "./sidebar-context"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { Button } from "@/components/ui/button"
 
 type NavItem = {
   label: string
@@ -46,36 +60,180 @@ const NAV_ITEMS: Record<UserRole, NavItem[]> = {
   ],
 }
 
+type DisplayMode = "expanded" | "hover" | "collapsed"
+
+const DISPLAY_OPTIONS: { label: string; value: DisplayMode }[] = [
+  { label: "Always show", value: "expanded" },
+  { label: "Show on hover", value: "hover" },
+  { label: "Collapse", value: "collapsed" },
+]
+
 export function Sidebar({ role }: { role: UserRole }) {
   const pathname = usePathname()
+  const { mode, setMode } = useSidebar()
+  const [hovered, setHovered] = useState(false)
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+  const leaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Tracks whether the pointer is physically inside the <aside> DOM element.
+  // A ref (not state) because we only need to read it in event callbacks —
+  // no render needs to react to it directly.
+  const isOverSidebar = useRef(false)
+
+  const expanded = mode === "expanded" || (mode === "hover" && (hovered || dropdownOpen))
+
+  // When mode changes away from "hover", stop any pending timer and clear hovered.
+  useEffect(() => {
+    if (mode !== "hover") {
+      if (leaveTimer.current) {
+        clearTimeout(leaveTimer.current)
+        leaveTimer.current = null
+      }
+      setHovered(false)
+    }
+  }, [mode])
+
+  function handleMouseEnter() {
+    isOverSidebar.current = true
+    // Only hover mode uses hovered state; skip unnecessary setState in other modes.
+    if (mode !== "hover") return
+    if (leaveTimer.current) {
+      clearTimeout(leaveTimer.current)
+      leaveTimer.current = null
+    }
+    setHovered(true)
+  }
+
+  function handleMouseLeave() {
+    isOverSidebar.current = false
+    if (mode !== "hover") return
+    // If the dropdown is open, the pointer moved to the portal (outside <aside>).
+    // Don't start the collapse timer — wait for the dropdown to close instead.
+    if (dropdownOpen) return
+    leaveTimer.current = setTimeout(() => {
+      setHovered(false)
+      leaveTimer.current = null
+    }, 150)
+  }
+
+  function handleDropdownOpenChange(open: boolean) {
+    setDropdownOpen(open)
+    // When the dropdown closes, check whether the pointer is still inside the sidebar.
+    // If not, we need to start the collapse timer ourselves — onMouseLeave on the aside
+    // already fired (and was suppressed while the dropdown was open), so it won't fire again.
+    if (!open && mode === "hover" && !isOverSidebar.current) {
+      if (leaveTimer.current) {
+        clearTimeout(leaveTimer.current)
+      }
+      leaveTimer.current = setTimeout(() => {
+        setHovered(false)
+        leaveTimer.current = null
+      }, 150)
+    }
+  }
+
   const items = NAV_ITEMS[role]
 
   return (
-    <aside className="fixed top-14 left-0 bottom-0 w-[240px] border-r bg-sidebar overflow-y-auto">
-      <nav className="flex flex-col gap-1 p-2 pt-3">
+    <aside
+      className={cn(
+        "fixed top-14 left-0 bottom-0 border-r bg-sidebar z-30 flex flex-col overflow-hidden transition-[width] duration-200 ease-in-out",
+        expanded ? "w-[240px]" : "w-14"
+      )}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
+      <nav className="flex flex-col gap-1 p-2 pt-3 flex-1 overflow-y-auto overflow-x-hidden">
         {items.map((item) => {
           const Icon = item.icon
           const isActive =
             item.href === `/${role}`
               ? pathname === item.href
               : pathname.startsWith(item.href)
-          return (
+
+          const linkContent = (
             <Link
               key={item.href}
               href={item.href}
               className={cn(
-                "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors min-w-0",
                 isActive
                   ? "bg-sidebar-primary text-sidebar-primary-foreground"
                   : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
               )}
             >
               <Icon className="size-4 shrink-0" />
-              {item.label}
+              <span
+                className={cn(
+                  "whitespace-nowrap overflow-hidden transition-[max-width,opacity] duration-200 ease-in-out",
+                  expanded ? "max-w-[200px] opacity-100" : "max-w-0 opacity-0"
+                )}
+              >
+                {item.label}
+              </span>
             </Link>
           )
+
+          if (!expanded) {
+            return (
+              <Tooltip key={item.href} delayDuration={0}>
+                <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
+                <TooltipContent side="right" sideOffset={8}>
+                  {item.label}
+                </TooltipContent>
+              </Tooltip>
+            )
+          }
+
+          return linkContent
         })}
       </nav>
+
+      <div className="shrink-0 p-2 border-t">
+        <DropdownMenu open={dropdownOpen} onOpenChange={handleDropdownOpenChange}>
+          <Tooltip delayDuration={0}>
+            <TooltipTrigger asChild>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-8 text-muted-foreground hover:text-foreground w-full justify-start px-3"
+                >
+                  <PanelLeft className="size-4 shrink-0" />
+                  <span
+                    className={cn(
+                      "ml-3 text-sm font-medium whitespace-nowrap overflow-hidden transition-[max-width,opacity] duration-200 ease-in-out",
+                      expanded ? "max-w-[160px] opacity-100" : "max-w-0 opacity-0"
+                    )}
+                  >
+                    Display
+                  </span>
+                </Button>
+              </DropdownMenuTrigger>
+            </TooltipTrigger>
+            {!expanded && (
+              <TooltipContent side="right" sideOffset={8}>
+                Sidebar display
+              </TooltipContent>
+            )}
+          </Tooltip>
+          <DropdownMenuContent side="right" align="end" sideOffset={8}>
+            <DropdownMenuLabel>Display</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {DISPLAY_OPTIONS.map((opt) => (
+              <DropdownMenuItem
+                key={opt.value}
+                onClick={() => setMode(opt.value)}
+                className="flex items-center gap-2"
+              >
+                <Check
+                  className={cn("size-3.5", mode === opt.value ? "opacity-100" : "opacity-0")}
+                />
+                {opt.label}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
     </aside>
   )
 }

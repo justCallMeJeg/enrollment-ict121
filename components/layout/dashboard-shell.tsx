@@ -1,5 +1,7 @@
 import { Header } from "@/components/layout/header"
 import { Sidebar } from "@/components/layout/sidebar"
+import { SidebarProvider } from "@/components/layout/sidebar-context"
+import { SidebarMain } from "@/components/layout/sidebar-main"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import type { SessionPayload } from "@/types"
 
@@ -11,12 +13,12 @@ export function DashboardShell({
   children: React.ReactNode
 }) {
   return (
-    <TooltipProvider delayDuration={300}>
-      <Header user={user} />
-      <Sidebar role={user.role} />
-      <main className="ml-[240px] mt-14 min-h-[calc(100vh-56px)] p-6">
-        {children}
-      </main>
-    </TooltipProvider>
+    <SidebarProvider>
+      <TooltipProvider delayDuration={300}>
+        <Header user={user} />
+        <Sidebar role={user.role} />
+        <SidebarMain>{children}</SidebarMain>
+      </TooltipProvider>
+    </SidebarProvider>
   )
 }
