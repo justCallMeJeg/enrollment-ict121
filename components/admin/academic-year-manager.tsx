@@ -8,13 +8,13 @@ import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { ConfirmModal } from "@/components/shared/confirm-modal"
 import { FormModal } from "@/components/shared/form-modal"
-import { TableToolbar } from "@/components/shared/table-toolbar"
-import { DataTable } from "@/components/shared/data-table"
+import { FilterDropdown } from "@/components/shared/filter-dropdown"
+import { SortMenu } from "@/components/shared/sort-menu"
 import type { AcademicYear } from "@/types"
-import { BookOpen, Pencil, Plus, Zap } from "lucide-react"
-import { IconButton } from "@/components/shared/icon-button"
+import { BookOpen, Pencil, Plus, Search, X, Zap } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { toast } from "sonner"
+import { cn } from "@/lib/utils"
 
 const STATUS_BADGE: Record<string, "default" | "secondary" | "outline"> = {
   active: "default",
@@ -22,6 +22,18 @@ const STATUS_BADGE: Record<string, "default" | "secondary" | "outline"> = {
   draft: "outline",
   ended: "outline",
 }
+
+const STATUS_OPTIONS = [
+  { label: "Draft", value: "draft" },
+  { label: "Upcoming", value: "upcoming" },
+  { label: "Active", value: "active" },
+  { label: "Ended", value: "ended" },
+]
+
+const SORT_OPTIONS = [
+  { label: "Name", value: "label" },
+  { label: "Creation date", value: "created_at" },
+]
 
 export function AcademicYearManager({ years }: { years: AcademicYear[] }) {
   const router = useRouter()
@@ -34,19 +46,35 @@ export function AcademicYearManager({ years }: { years: AcademicYear[] }) {
   const [openTarget, setOpenTarget] = useState<AcademicYear | null>(null)
   const [opening, setOpening] = useState(false)
   const [search, setSearch] = useState("")
-  const [filterStatus, setFilterStatus] = useState("all")
+  const [filterStatus, setFilterStatus] = useState<string[]>([])
+  const [sortBy, setSortBy] = useState("created_at")
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc")
 
   const draft = years.find((y) => y.status === "draft")
   const upcoming = years.find((y) => y.status === "upcoming")
   const blocked = draft ?? upcoming
 
   const filtered = useMemo(() => {
-    return years.filter((y) => {
-      const matchesSearch = !search.trim() || y.label.toLowerCase().includes(search.toLowerCase())
-      const matchesStatus = filterStatus === "all" || y.status === filterStatus
+    const q = search.trim().toLowerCase()
+    let result = years.filter((y) => {
+      const matchesSearch = !q || y.label.toLowerCase().includes(q)
+      const matchesStatus =
+        filterStatus.length === 0 || filterStatus.includes(y.status)
       return matchesSearch && matchesStatus
     })
-  }, [years, search, filterStatus])
+
+    result = [...result].sort((a, b) => {
+      let cmp = 0
+      if (sortBy === "label") {
+        cmp = a.label.localeCompare(b.label)
+      } else {
+        cmp = a.created_at.localeCompare(b.created_at)
+      }
+      return sortDir === "asc" ? cmp : -cmp
+    })
+
+    return result
+  }, [years, search, filterStatus, sortBy, sortDir])
 
   function openCreate() {
     setLabel("")
@@ -105,7 +133,9 @@ export function AcademicYearManager({ years }: { years: AcademicYear[] }) {
       setOpenTarget(null)
       router.refresh()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to open pre-enrollment")
+      toast.error(
+        err instanceof Error ? err.message : "Failed to open pre-enrollment"
+      )
     } finally {
       setOpening(false)
     }
@@ -131,131 +161,123 @@ export function AcademicYearManager({ years }: { years: AcademicYear[] }) {
     }
   }
 
-  const hasFilters = search || filterStatus !== "all"
+  const hasFilters = search || filterStatus.length > 0
 
   return (
-    <div>
-      <TableToolbar
-        search={search}
-        onSearchChange={setSearch}
-        searchPlaceholder="Search academic years…"
-        filters={[
-          {
-            key: "status",
-            placeholder: "All Statuses",
-            options: [
-              { label: "Draft", value: "draft" },
-              { label: "Upcoming", value: "upcoming" },
-              { label: "Active", value: "active" },
-              { label: "Ended", value: "ended" },
-            ],
-            value: filterStatus,
-            onChange: setFilterStatus,
-          },
-        ]}
-        resultCount={filtered.length}
-        totalCount={years.length}
-        action={
-          <Tooltip>
-            <TooltipTrigger asChild>
-              {blocked ? (
-                <span className="inline-flex" tabIndex={0}>
-                  <Button size="sm" disabled>
-                    <Plus className="size-4 mr-2" />
-                    Add Academic Year
-                  </Button>
-                </span>
-              ) : (
-                <Button size="sm" onClick={openCreate}>
+    <div className="space-y-4">
+      {/* Toolbar */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative flex-1 min-w-[200px] max-w-sm">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
+          <Input
+            className="pl-8 h-9"
+            placeholder="Search academic years…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+
+        <FilterDropdown
+          label="Status"
+          options={STATUS_OPTIONS}
+          selected={filterStatus}
+          onApply={setFilterStatus}
+        />
+
+        <SortMenu
+          options={SORT_OPTIONS}
+          sortBy={sortBy}
+          direction={sortDir}
+          onChange={(by, dir) => {
+            setSortBy(by)
+            setSortDir(dir)
+          }}
+        />
+
+        {hasFilters && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-9 px-2 text-muted-foreground"
+            onClick={() => {
+              setSearch("")
+              setFilterStatus([])
+            }}
+          >
+            <X className="size-3.5 mr-1" />
+            Clear
+          </Button>
+        )}
+
+        <div className="flex-1" />
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            {blocked ? (
+              <span className="inline-flex" tabIndex={0}>
+                <Button size="sm" disabled>
                   <Plus className="size-4 mr-2" />
                   Add Academic Year
                 </Button>
-              )}
-            </TooltipTrigger>
-            <TooltipContent sideOffset={4}>
-              {blocked
-                ? draft
-                  ? "A draft year already exists — open it for pre-enrollment first"
-                  : "Activate the upcoming year before creating another"
-                : "Create a new draft academic year"}
-            </TooltipContent>
-          </Tooltip>
-        }
-      />
+              </span>
+            ) : (
+              <Button size="sm" onClick={openCreate}>
+                <Plus className="size-4 mr-2" />
+                Add Academic Year
+              </Button>
+            )}
+          </TooltipTrigger>
+          <TooltipContent sideOffset={4}>
+            {blocked
+              ? draft
+                ? "A draft year already exists — open it for pre-enrollment first"
+                : "Activate the upcoming year before creating another"
+              : "Create a new draft academic year"}
+          </TooltipContent>
+        </Tooltip>
+      </div>
 
-      <DataTable
-        keyField="id"
-        data={filtered as unknown as Record<string, unknown>[]}
-        columns={[
-          { key: "label", header: "Label" },
-          {
-            key: "status",
-            header: "Status",
-            render: (row) => {
-              const year = row as unknown as AcademicYear
-              return (
-                <Badge variant={STATUS_BADGE[year.status] ?? "outline"} className="capitalize">
-                  {year.status}
-                </Badge>
-              )
-            },
-          },
-          {
-            key: "actions",
-            header: "",
-            render: (row) => {
-              const year = row as unknown as AcademicYear
-              return (
-                <div className="flex gap-1 justify-end items-center">
-                  <IconButton tooltip="Edit label" className="hover:text-foreground" onClick={() => openEdit(year)}>
-                    <Pencil className="size-3.5" />
-                  </IconButton>
-                  {year.status === "draft" && (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setOpenTarget(year)}
-                        >
-                          <BookOpen className="size-3 mr-1" />
-                          Open Pre-Enrollment
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent sideOffset={4}>
-                        Allow students to pre-enroll for this academic year
-                      </TooltipContent>
-                    </Tooltip>
-                  )}
-                  {year.status === "upcoming" && (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setActivateTarget(year)}
-                        >
-                          <Zap className="size-3 mr-1" />
-                          Activate
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent sideOffset={4}>
-                        End the current active year and convert pre-enrollments to enrollments
-                      </TooltipContent>
-                    </Tooltip>
-                  )}
-                </div>
-              )
-            },
-          },
-        ]}
-        emptyTitle={hasFilters ? "No academic years match your filters" : "No academic years"}
-        emptyDescription={hasFilters ? "Try adjusting your search or filter" : "Create your first academic year using the button above"}
-      />
+      {hasFilters && (
+        <p className="text-xs text-muted-foreground">
+          Showing {filtered.length} of {years.length} result
+          {years.length !== 1 ? "s" : ""}
+        </p>
+      )}
+
+      {/* Card grid */}
+      {filtered.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <p className="text-sm font-medium text-foreground">
+            {hasFilters
+              ? "No academic years match your filters"
+              : "No academic years"}
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">
+            {hasFilters
+              ? "Try adjusting your search or filter"
+              : "Create your first academic year using the button above"}
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filtered.map((year) => (
+            <YearCard
+              key={year.id}
+              year={year}
+              onEdit={openEdit}
+              onOpen={setOpenTarget}
+              onActivate={setActivateTarget}
+            />
+          ))}
+        </div>
+      )}
 
       <FormModal
         open={modalOpen}
-        onOpenChange={(o) => { if (!o) closeModal(); else setModalOpen(true) }}
+        onOpenChange={(o) => {
+          if (!o) closeModal()
+          else setModalOpen(true)
+        }}
         title={editTarget ? "Edit Academic Year" : "Add Academic Year"}
         onSubmit={handleSubmit}
         submitLabel={editTarget ? "Save Changes" : "Create Academic Year"}
@@ -294,6 +316,88 @@ export function AcademicYearManager({ years }: { years: AcademicYear[] }) {
         onConfirm={handleActivate}
         loading={activating}
       />
+    </div>
+  )
+}
+
+function YearCard({
+  year,
+  onEdit,
+  onOpen,
+  onActivate,
+}: {
+  year: AcademicYear
+  onEdit: (year: AcademicYear) => void
+  onOpen: (year: AcademicYear) => void
+  onActivate: (year: AcademicYear) => void
+}) {
+  return (
+    <div
+      className={cn(
+        "rounded-lg border bg-card p-5 flex flex-col gap-4 transition-shadow hover:shadow-md",
+        year.status === "active" && "border-primary/40"
+      )}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <h3 className="font-semibold text-sm leading-snug">{year.label}</h3>
+        <Badge
+          variant={STATUS_BADGE[year.status] ?? "outline"}
+          className="capitalize shrink-0 text-[11px]"
+        >
+          {year.status}
+        </Badge>
+      </div>
+
+      <div className="flex items-center gap-2 mt-auto pt-1 border-t">
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+          onClick={() => onEdit(year)}
+        >
+          <Pencil className="size-3 mr-1" />
+          Edit label
+        </Button>
+
+        {year.status === "draft" && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 px-2 text-xs ml-auto"
+                onClick={() => onOpen(year)}
+              >
+                <BookOpen className="size-3 mr-1" />
+                Open Pre-Enrollment
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent sideOffset={4}>
+              Allow students to pre-enroll for this academic year
+            </TooltipContent>
+          </Tooltip>
+        )}
+
+        {year.status === "upcoming" && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 px-2 text-xs ml-auto"
+                onClick={() => onActivate(year)}
+              >
+                <Zap className="size-3 mr-1" />
+                Activate
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent sideOffset={4}>
+              End the current active year and convert pre-enrollments to
+              enrollments
+            </TooltipContent>
+          </Tooltip>
+        )}
+      </div>
     </div>
   )
 }

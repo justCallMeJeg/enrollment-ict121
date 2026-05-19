@@ -75,9 +75,9 @@ export function CourseManager({
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [search, setSearch] = useState("")
-  const [filterSemester, setFilterSemester] = useState("all")
-  const [filterYear, setFilterYear] = useState("all")
-  const [filterProgram, setFilterProgram] = useState("all")
+  const [filterSemester, setFilterSemester] = useState<string[]>([])
+  const [filterYear, setFilterYear] = useState<string[]>([])
+  const [filterProgram, setFilterProgram] = useState<string[]>([])
 
   const filtered = useMemo(() => {
     return courses.filter((c) => {
@@ -85,9 +85,12 @@ export function CourseManager({
         !search.trim() ||
         c.course_code.toLowerCase().includes(search.toLowerCase()) ||
         c.name.toLowerCase().includes(search.toLowerCase())
-      const matchesSemester = filterSemester === "all" || c.semester === filterSemester
-      const matchesYear = filterYear === "all" || String(c.year_level) === filterYear
-      const matchesProgram = filterProgram === "all" || c.program_id === filterProgram
+      const matchesSemester =
+        filterSemester.length === 0 || filterSemester.includes(c.semester)
+      const matchesYear =
+        filterYear.length === 0 || filterYear.includes(String(c.year_level))
+      const matchesProgram =
+        filterProgram.length === 0 || filterProgram.includes(c.program_id)
       return matchesSearch && matchesSemester && matchesYear && matchesProgram
     })
   }, [courses, search, filterSemester, filterYear, filterProgram])
@@ -178,7 +181,11 @@ export function CourseManager({
   }
 
   const programOptions = programs.map((p) => ({ label: `${p.code} — ${p.name}`, value: p.id }))
-  const hasFilters = search || filterSemester !== "all" || filterYear !== "all" || filterProgram !== "all"
+  const hasFilters =
+    search ||
+    filterSemester.length > 0 ||
+    filterYear.length > 0 ||
+    filterProgram.length > 0
 
   return (
     <div>
@@ -189,24 +196,24 @@ export function CourseManager({
         filters={[
           {
             key: "semester",
-            placeholder: "All Semesters",
+            label: "Semester",
             options: SEMESTERS.map((s) => ({ label: `${s} Semester`, value: s })),
-            value: filterSemester,
-            onChange: setFilterSemester,
+            selected: filterSemester,
+            onApply: setFilterSemester,
           },
           {
             key: "year",
-            placeholder: "All Years",
+            label: "Year",
             options: [1, 2, 3, 4, 5, 6].map((y) => ({ label: `Year ${y}`, value: String(y) })),
-            value: filterYear,
-            onChange: setFilterYear,
+            selected: filterYear,
+            onApply: setFilterYear,
           },
           {
             key: "program",
-            placeholder: "All Programs",
+            label: "Program",
             options: programOptions,
-            value: filterProgram,
-            onChange: setFilterProgram,
+            selected: filterProgram,
+            onApply: setFilterProgram,
           },
         ]}
         resultCount={filtered.length}

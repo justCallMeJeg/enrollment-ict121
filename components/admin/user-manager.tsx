@@ -61,7 +61,7 @@ export function UserManager({
   const [deleteTarget, setDeleteTarget] = useState<UserRow | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [search, setSearch] = useState("")
-  const [filterRole, setFilterRole] = useState("all")
+  const [filterRole, setFilterRole] = useState<string[]>([])
 
   const filtered = useMemo(() => {
     return users.filter((u) => {
@@ -69,7 +69,7 @@ export function UserManager({
         !search.trim() ||
         u.name.toLowerCase().includes(search.toLowerCase()) ||
         u.email.toLowerCase().includes(search.toLowerCase())
-      const matchesRole = filterRole === "all" || u.role === filterRole
+      const matchesRole = filterRole.length === 0 || filterRole.includes(u.role)
       return matchesSearch && matchesRole
     })
   }, [users, search, filterRole])
@@ -157,7 +157,7 @@ export function UserManager({
     }
   }
 
-  const hasFilters = search || filterRole !== "all"
+  const hasFilters = search || filterRole.length > 0
 
   return (
     <div>
@@ -168,13 +168,13 @@ export function UserManager({
         filters={[
           {
             key: "role",
-            placeholder: "All Roles",
+            label: "Role",
             options: [
               { label: "Student", value: "student" },
               { label: "Professor", value: "professor" },
             ],
-            value: filterRole,
-            onChange: setFilterRole,
+            selected: filterRole,
+            onApply: setFilterRole,
           },
         ]}
         resultCount={filtered.length}

@@ -47,7 +47,7 @@ export function ProgramManager({
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [search, setSearch] = useState("")
-  const [filterDept, setFilterDept] = useState("all")
+  const [filterDept, setFilterDept] = useState<string[]>([])
 
   const filtered = useMemo(() => {
     return programs.filter((p) => {
@@ -55,7 +55,8 @@ export function ProgramManager({
         !search.trim() ||
         p.name.toLowerCase().includes(search.toLowerCase()) ||
         p.code.toLowerCase().includes(search.toLowerCase())
-      const matchesDept = filterDept === "all" || p.department_id === filterDept
+      const matchesDept =
+        filterDept.length === 0 || filterDept.includes(p.department_id)
       return matchesSearch && matchesDept
     })
   }, [programs, search, filterDept])
@@ -140,10 +141,10 @@ export function ProgramManager({
         filters={[
           {
             key: "department",
-            placeholder: "All Departments",
+            label: "Department",
             options: deptOptions,
-            value: filterDept,
-            onChange: setFilterDept,
+            selected: filterDept,
+            onApply: setFilterDept,
           },
         ]}
         resultCount={filtered.length}
@@ -189,8 +190,8 @@ export function ProgramManager({
             },
           },
         ]}
-        emptyTitle={search || filterDept !== "all" ? "No programs match your filters" : "No programs yet"}
-        emptyDescription={search || filterDept !== "all" ? "Try adjusting your search or filter" : "Add your first program using the button above"}
+        emptyTitle={search || filterDept.length > 0 ? "No programs match your filters" : "No programs yet"}
+        emptyDescription={search || filterDept.length > 0 ? "Try adjusting your search or filter" : "Add your first program using the button above"}
       />
 
       <FormModal

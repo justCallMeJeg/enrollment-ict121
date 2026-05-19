@@ -46,7 +46,7 @@ export function DepartmentManager({
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [search, setSearch] = useState("")
-  const [filterCollege, setFilterCollege] = useState("all")
+  const [filterCollege, setFilterCollege] = useState<string[]>([])
 
   const filtered = useMemo(() => {
     return departments.filter((d) => {
@@ -54,7 +54,8 @@ export function DepartmentManager({
         !search.trim() ||
         d.name.toLowerCase().includes(search.toLowerCase()) ||
         d.code.toLowerCase().includes(search.toLowerCase())
-      const matchesCollege = filterCollege === "all" || d.college_id === filterCollege
+      const matchesCollege =
+        filterCollege.length === 0 || filterCollege.includes(d.college_id)
       return matchesSearch && matchesCollege
     })
   }, [departments, search, filterCollege])
@@ -134,10 +135,10 @@ export function DepartmentManager({
         filters={[
           {
             key: "college",
-            placeholder: "All Colleges",
+            label: "College",
             options: collegeOptions,
-            value: filterCollege,
-            onChange: setFilterCollege,
+            selected: filterCollege,
+            onApply: setFilterCollege,
           },
         ]}
         resultCount={filtered.length}
@@ -182,8 +183,8 @@ export function DepartmentManager({
             },
           },
         ]}
-        emptyTitle={search || filterCollege !== "all" ? "No departments match your filters" : "No departments yet"}
-        emptyDescription={search || filterCollege !== "all" ? "Try adjusting your search or filter" : "Add your first department using the button above"}
+        emptyTitle={search || filterCollege.length > 0 ? "No departments match your filters" : "No departments yet"}
+        emptyDescription={search || filterCollege.length > 0 ? "Try adjusting your search or filter" : "Add your first department using the button above"}
       />
 
       <FormModal

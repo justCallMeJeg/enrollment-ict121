@@ -1,23 +1,25 @@
 "use client"
 
 import { Input } from "@/components/ui/input"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { Search, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { FilterDropdown } from "@/components/shared/filter-dropdown"
+import { SortMenu, type SortOption } from "@/components/shared/sort-menu"
 
 export type FilterConfig = {
   key: string
-  placeholder: string
+  label: string
   options: { label: string; value: string }[]
-  value: string
-  onChange: (value: string) => void
+  selected: string[]
+  onApply: (values: string[]) => void
+}
+
+export type SortConfig = {
+  options: SortOption[]
+  sortBy: string
+  direction: "asc" | "desc"
+  onChange: (sortBy: string, direction: "asc" | "desc") => void
 }
 
 type Props = {
@@ -25,6 +27,7 @@ type Props = {
   onSearchChange: (value: string) => void
   searchPlaceholder?: string
   filters?: FilterConfig[]
+  sort?: SortConfig
   action?: React.ReactNode
   resultCount?: number
   totalCount?: number
@@ -35,16 +38,17 @@ export function TableToolbar({
   onSearchChange,
   searchPlaceholder = "Search…",
   filters,
+  sort,
   action,
   resultCount,
   totalCount,
 }: Props) {
   const hasActiveFilters =
-    search.length > 0 || filters?.some((f) => f.value !== "all")
+    search.length > 0 || filters?.some((f) => f.selected.length > 0)
 
   function clearAll() {
     onSearchChange("")
-    filters?.forEach((f) => f.onChange("all"))
+    filters?.forEach((f) => f.onApply([]))
   }
 
   return (
@@ -61,20 +65,23 @@ export function TableToolbar({
         </div>
 
         {filters?.map((f) => (
-          <Select key={f.key} value={f.value} onValueChange={f.onChange}>
-            <SelectTrigger className="h-9 w-auto min-w-[130px]">
-              <SelectValue placeholder={f.placeholder} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{f.placeholder}</SelectItem>
-              {f.options.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <FilterDropdown
+            key={f.key}
+            label={f.label}
+            options={f.options}
+            selected={f.selected}
+            onApply={f.onApply}
+          />
         ))}
+
+        {sort && (
+          <SortMenu
+            options={sort.options}
+            sortBy={sort.sortBy}
+            direction={sort.direction}
+            onChange={sort.onChange}
+          />
+        )}
 
         {hasActiveFilters && (
           <Tooltip>
@@ -98,11 +105,14 @@ export function TableToolbar({
         {action && <div className="shrink-0">{action}</div>}
       </div>
 
-      {(resultCount !== undefined && totalCount !== undefined && hasActiveFilters) && (
-        <p className="text-xs text-muted-foreground">
-          Showing {resultCount} of {totalCount} result{totalCount !== 1 ? "s" : ""}
-        </p>
-      )}
+      {resultCount !== undefined &&
+        totalCount !== undefined &&
+        hasActiveFilters && (
+          <p className="text-xs text-muted-foreground">
+            Showing {resultCount} of {totalCount} result
+            {totalCount !== 1 ? "s" : ""}
+          </p>
+        )}
     </div>
   )
 }
