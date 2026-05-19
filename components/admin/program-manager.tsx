@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Combobox } from "@/components/shared/combobox"
 import { DataTable } from "@/components/shared/data-table"
 import { ConfirmModal } from "@/components/shared/confirm-modal"
 import { FormModal } from "@/components/shared/form-modal"
@@ -204,18 +205,14 @@ export function ProgramManager({
       >
         <div className="space-y-2">
           <Label>Department</Label>
-          <Select value={form.department_id} onValueChange={(v) => set("department_id", v)} required>
-            <SelectTrigger>
-              <SelectValue placeholder="Select a department" />
-            </SelectTrigger>
-            <SelectContent position="popper">
-              {departments.map((d) => (
-                <SelectItem key={d.id} value={d.id}>
-                  {d.code} — {d.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Combobox
+            options={departments.map((d) => ({ value: d.id, label: d.name, code: d.code }))}
+            value={form.department_id}
+            onValueChange={(v) => set("department_id", v)}
+            placeholder="Select a department"
+            searchPlaceholder="Search departments…"
+            emptyText="No departments found."
+          />
         </div>
         <div className="grid grid-cols-[1fr_auto] gap-4 items-start">
           <div className="space-y-2">

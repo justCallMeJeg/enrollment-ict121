@@ -17,6 +17,7 @@ import {
   InputGroupText,
   InputGroupInput,
 } from "@/components/ui/input-group"
+import { Combobox } from "@/components/shared/combobox"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { toast } from "sonner"
@@ -190,22 +191,14 @@ export function CreateUserForm({ programs }: Props) {
               </div>
               <div className="space-y-2">
                 <Label>Program</Label>
-                <Select
+                <Combobox
+                  options={programs.map((p) => ({ value: p.id, label: p.name, code: p.code }))}
                   value={form.program_id}
                   onValueChange={handleProgramChange}
-                  required
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select program" />
-                  </SelectTrigger>
-                  <SelectContent position="popper">
-                    {programs.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.code} — {p.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  placeholder="Select program"
+                  searchPlaceholder="Search programs…"
+                  emptyText="No programs found."
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="section">Section</Label>

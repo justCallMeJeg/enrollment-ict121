@@ -19,6 +19,7 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group"
 import { Badge } from "@/components/ui/badge"
+import { Combobox } from "@/components/shared/combobox"
 import { DataTable } from "@/components/shared/data-table"
 import { ConfirmModal } from "@/components/shared/confirm-modal"
 import { FormModal } from "@/components/shared/form-modal"
@@ -363,22 +364,14 @@ export function UserManager({
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Program</Label>
-                <Select
+                <Combobox
+                  options={programs.map((p) => ({ value: p.id, label: p.name, code: p.code }))}
                   value={form.program_id}
                   onValueChange={handleProgramChange}
-                  required
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select program" />
-                  </SelectTrigger>
-                  <SelectContent position="popper">
-                    {programs.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.code} — {p.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  placeholder="Select program"
+                  searchPlaceholder="Search programs…"
+                  emptyText="No programs found."
+                />
               </div>
               <div className="space-y-2">
                 <Label>Year Level</Label>

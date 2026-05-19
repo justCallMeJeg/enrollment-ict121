@@ -326,18 +326,14 @@ export function CourseManager({
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label>Program</Label>
-            <Select value={form.program_id} onValueChange={(v) => set("program_id", v)} required>
-              <SelectTrigger>
-                <SelectValue placeholder="Select program" />
-              </SelectTrigger>
-              <SelectContent position="popper">
-                {programs.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>
-                    {p.code} — {p.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Combobox
+              options={programs.map((p) => ({ value: p.id, label: p.name, code: p.code }))}
+              value={form.program_id}
+              onValueChange={(v) => set("program_id", v)}
+              placeholder="Select program"
+              searchPlaceholder="Search programs…"
+              emptyText="No programs found."
+            />
           </div>
           <div className="space-y-2">
             <Label>Professor</Label>

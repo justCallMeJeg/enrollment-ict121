@@ -5,13 +5,7 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { Combobox } from "@/components/shared/combobox"
 import { DataTable } from "@/components/shared/data-table"
 import { ConfirmModal } from "@/components/shared/confirm-modal"
 import { FormModal } from "@/components/shared/form-modal"
@@ -197,18 +191,14 @@ export function DepartmentManager({
       >
         <div className="space-y-2">
           <Label>College</Label>
-          <Select value={form.college_id} onValueChange={(v) => set("college_id", v)} required>
-            <SelectTrigger>
-              <SelectValue placeholder="Select a college" />
-            </SelectTrigger>
-            <SelectContent position="popper">
-              {colleges.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.code} — {c.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Combobox
+            options={colleges.map((c) => ({ value: c.id, label: c.name, code: c.code }))}
+            value={form.college_id}
+            onValueChange={(v) => set("college_id", v)}
+            placeholder="Select a college"
+            searchPlaceholder="Search colleges…"
+            emptyText="No colleges found."
+          />
         </div>
         <div className="grid grid-cols-[1fr_auto] gap-4 items-start">
           <div className="space-y-2">

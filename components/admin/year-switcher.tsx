@@ -13,7 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Check, ChevronDown, Plus, Search } from "lucide-react"
+import { Check, ChevronsUpDown, GraduationCap, Plus, Search } from "lucide-react"
 import type { AdminYearContext, AcademicYearStatus } from "@/types"
 
 const STATUS_BADGE: Record<AcademicYearStatus, "default" | "secondary" | "outline"> = {
@@ -58,28 +58,34 @@ export function YearSwitcher({
       }}
     >
       <DropdownMenuTrigger asChild>
-        <button className="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm font-medium hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors">
-          {currentYear ? (
-            <>
-              <span className="max-w-[160px] truncate">{currentYear.label}</span>
-              <Badge
-                variant={STATUS_BADGE[currentYear.status]}
-                className="text-[10px] px-1.5 py-0 capitalize hidden sm:inline-flex"
-              >
-                {currentYear.status}
-              </Badge>
-            </>
-          ) : (
-            <span className="text-muted-foreground">Select year</span>
+        <button
+          className={cn(
+            "flex items-center gap-1.5 rounded-lg border bg-card px-2 py-1.5 text-sm font-medium",
+            "hover:bg-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           )}
-          <ChevronDown className="size-3.5 text-muted-foreground shrink-0" />
+        >
+          <span className="flex size-5 items-center justify-center rounded bg-muted shrink-0">
+            <GraduationCap className="size-3 text-muted-foreground" />
+          </span>
+          <span className="max-w-[180px] truncate leading-none">
+            {currentYear ? currentYear.label : "Select year"}
+          </span>
+          {currentYear && (
+            <Badge
+              variant={STATUS_BADGE[currentYear.status]}
+              className="text-[10px] px-1.5 py-0 capitalize hidden sm:inline-flex shrink-0"
+            >
+              {currentYear.status}
+            </Badge>
+          )}
+          <ChevronsUpDown className="size-3.5 text-muted-foreground shrink-0" />
         </button>
       </DropdownMenuTrigger>
 
       <DropdownMenuContent
         align="start"
         sideOffset={6}
-        className="w-[260px] p-0"
+        className="w-[280px] p-0"
         onCloseAutoFocus={(e) => e.preventDefault()}
       >
         {/* Search */}
@@ -91,7 +97,6 @@ export function YearSwitcher({
               placeholder="Find academic year…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              // Prevent Radix from closing or navigating on key presses
               onKeyDown={(e) => e.stopPropagation()}
             />
           </div>
