@@ -16,6 +16,7 @@ import { DataTable } from "@/components/shared/data-table"
 import { ConfirmModal } from "@/components/shared/confirm-modal"
 import { FormModal } from "@/components/shared/form-modal"
 import { TableToolbar } from "@/components/shared/table-toolbar"
+import { Combobox } from "@/components/shared/combobox"
 import { Badge } from "@/components/ui/badge"
 import { Pencil, Plus, Trash2 } from "lucide-react"
 import { IconButton } from "@/components/shared/icon-button"
@@ -135,11 +136,7 @@ export function CourseManager({
         units: Number(form.units),
         year_level: Number(form.year_level),
         professor_id: form.professor_id || null,
-        prerequisite_course_id:
-          form.prerequisite_course_id && form.prerequisite_course_id !== "none"
-            ? form.prerequisite_course_id
-            : null,
-        // Only include academic_year_id on create — PATCH ignores it
+        prerequisite_course_id: form.prerequisite_course_id || null,
         ...(!editTarget && { academic_year_id: academicYearId }),
       }
       const url = editTarget ? `/api/admin/courses/${editTarget}` : "/api/admin/courses"
@@ -180,12 +177,21 @@ export function CourseManager({
     }
   }
 
-  const programOptions = programs.map((p) => ({ label: `${p.code} — ${p.name}`, value: p.id }))
   const hasFilters =
     search ||
     filterSemester.length > 0 ||
     filterYear.length > 0 ||
     filterProgram.length > 0
+
+  // Combobox options
+  const professorOptions = professors.map((p) => {
+    const pUser = Array.isArray(p.users) ? p.users[0] : p.users
+    return { value: p.user_id, label: pUser?.name ?? p.faculty_id, code: p.faculty_id }
+  })
+
+  const prerequisiteOptions = courses
+    .filter((c) => c.id !== editTarget)
+    .map((c) => ({ value: c.id, label: c.name, code: c.course_code }))
 
   return (
     <div>
@@ -197,7 +203,10 @@ export function CourseManager({
           {
             key: "semester",
             label: "Semester",
-            options: SEMESTERS.map((s) => ({ label: `${s} Semester`, value: s })),
+            options: SEMESTERS.map((s) => ({
+              label: s === "summer" ? "Summer" : `${s} Semester`,
+              value: s,
+            })),
             selected: filterSemester,
             onApply: setFilterSemester,
           },
@@ -211,7 +220,7 @@ export function CourseManager({
           {
             key: "program",
             label: "Program",
-            options: programOptions,
+            options: programs.map((p) => ({ label: p.name, value: p.id })),
             selected: filterProgram,
             onApply: setFilterProgram,
           },
@@ -321,7 +330,7 @@ export function CourseManager({
               <SelectTrigger>
                 <SelectValue placeholder="Select program" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent position="popper">
                 {programs.map((p) => (
                   <SelectItem key={p.id} value={p.id}>
                     {p.code} — {p.name}
@@ -332,21 +341,15 @@ export function CourseManager({
           </div>
           <div className="space-y-2">
             <Label>Professor</Label>
-            <Select value={form.professor_id} onValueChange={(v) => set("professor_id", v)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select professor (optional)" />
-              </SelectTrigger>
-              <SelectContent>
-                {professors.map((p) => {
-                  const pUser = Array.isArray(p.users) ? p.users[0] : p.users
-                  return (
-                    <SelectItem key={p.user_id} value={p.user_id}>
-                      {pUser?.name ?? p.faculty_id}
-                    </SelectItem>
-                  )
-                })}
-              </SelectContent>
-            </Select>
+            <Combobox
+              options={professorOptions}
+              value={form.professor_id}
+              onValueChange={(v) => set("professor_id", v)}
+              placeholder="Select professor (optional)"
+              searchPlaceholder="Search professors…"
+              emptyText="No professors found."
+              clearable
+            />
           </div>
         </div>
         <div className="grid grid-cols-3 gap-4">
@@ -356,9 +359,11 @@ export function CourseManager({
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent position="popper">
                 {SEMESTERS.map((s) => (
-                  <SelectItem key={s} value={s}>{s} Semester</SelectItem>
+                  <SelectItem key={s} value={s}>
+                    {s === "summer" ? "Summer" : `${s} Semester`}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -369,7 +374,7 @@ export function CourseManager({
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent position="popper">
                 {[1, 2, 3, 4, 5, 6].map((y) => (
                   <SelectItem key={y} value={String(y)}>Year {y}</SelectItem>
                 ))}
@@ -391,24 +396,15 @@ export function CourseManager({
         </div>
         <div className="space-y-2">
           <Label>Prerequisite Course</Label>
-          <Select
-            value={form.prerequisite_course_id || "none"}
+          <Combobox
+            options={prerequisiteOptions}
+            value={form.prerequisite_course_id}
             onValueChange={(v) => set("prerequisite_course_id", v)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="None (no prerequisite)" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">None</SelectItem>
-              {courses
-                .filter((c) => c.id !== editTarget)
-                .map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.course_code} — {c.name}
-                  </SelectItem>
-                ))}
-            </SelectContent>
-          </Select>
+            placeholder="None (no prerequisite)"
+            searchPlaceholder="Search courses…"
+            emptyText="No courses found."
+            clearable
+          />
         </div>
       </FormModal>
 

@@ -130,7 +130,7 @@ export function ProgramManager({
     }
   }
 
-  const deptOptions = departments.map((d) => ({ label: `${d.code} — ${d.name}`, value: d.id }))
+  const deptOptions = departments.map((d) => ({ label: d.name, value: d.id }))
 
   return (
     <div>
@@ -208,7 +208,7 @@ export function ProgramManager({
             <SelectTrigger>
               <SelectValue placeholder="Select a department" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent position="popper">
               {departments.map((d) => (
                 <SelectItem key={d.id} value={d.id}>
                   {d.code} — {d.name}
@@ -245,7 +245,7 @@ export function ProgramManager({
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent position="popper">
               {[2, 3, 4, 5, 6].map((y) => (
                 <SelectItem key={y} value={String(y)}>
                   {y} years

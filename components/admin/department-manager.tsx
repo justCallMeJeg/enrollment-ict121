@@ -124,7 +124,7 @@ export function DepartmentManager({
     }
   }
 
-  const collegeOptions = colleges.map((c) => ({ label: `${c.code} — ${c.name}`, value: c.id }))
+  const collegeOptions = colleges.map((c) => ({ label: c.name, value: c.id }))
 
   return (
     <div>
@@ -201,7 +201,7 @@ export function DepartmentManager({
             <SelectTrigger>
               <SelectValue placeholder="Select a college" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent position="popper">
               {colleges.map((c) => (
                 <SelectItem key={c.id} value={c.id}>
                   {c.code} — {c.name}

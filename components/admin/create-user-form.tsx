@@ -3,7 +3,6 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
   Select,
@@ -12,6 +11,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupText,
+  InputGroupInput,
+} from "@/components/ui/input-group"
+import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { toast } from "sonner"
 import type { Program } from "@/types"
@@ -37,6 +43,24 @@ export function CreateUserForm({ programs }: Props) {
 
   function set(key: string, value: string) {
     setForm((prev) => ({ ...prev, [key]: value }))
+  }
+
+  function handleProgramChange(programId: string) {
+    const prog = programs.find((p) => p.id === programId)
+    const code = prog?.code ?? ""
+    set("program_id", programId)
+    set("section", code ? `${code}-` : "")
+  }
+
+  const selectedProgram = programs.find((p) => p.id === form.program_id)
+  const sectionPrefix = selectedProgram?.code ?? ""
+  const sectionSuffix =
+    sectionPrefix && form.section.startsWith(`${sectionPrefix}-`)
+      ? form.section.slice(sectionPrefix.length + 1)
+      : form.section
+
+  function handleSectionChange(val: string) {
+    set("section", sectionPrefix ? `${sectionPrefix}-${val}` : val)
   }
 
   async function handleSubmit(e: { preventDefault(): void }) {
@@ -86,7 +110,7 @@ export function CreateUserForm({ programs }: Props) {
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent position="popper">
                   <SelectItem value="student">Student</SelectItem>
                   <SelectItem value="professor">Professor</SelectItem>
                 </SelectContent>
@@ -155,7 +179,7 @@ export function CreateUserForm({ programs }: Props) {
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent position="popper">
                     {[1, 2, 3, 4, 5, 6].map((y) => (
                       <SelectItem key={y} value={String(y)}>
                         Year {y}
@@ -168,13 +192,13 @@ export function CreateUserForm({ programs }: Props) {
                 <Label>Program</Label>
                 <Select
                   value={form.program_id}
-                  onValueChange={(v) => set("program_id", v)}
+                  onValueChange={handleProgramChange}
                   required
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select program" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent position="popper">
                     {programs.map((p) => (
                       <SelectItem key={p.id} value={p.id}>
                         {p.code} — {p.name}
@@ -185,13 +209,30 @@ export function CreateUserForm({ programs }: Props) {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="section">Section</Label>
-                <Input
-                  id="section"
-                  value={form.section}
-                  onChange={(e) => set("section", e.target.value)}
-                  placeholder="e.g. A, BSCS-3A"
-                  required={role === "student"}
-                />
+                {sectionPrefix ? (
+                  <InputGroup className="h-9">
+                    <InputGroupAddon>
+                      <InputGroupText className="font-mono text-xs">
+                        {sectionPrefix}-
+                      </InputGroupText>
+                    </InputGroupAddon>
+                    <InputGroupInput
+                      id="section"
+                      value={sectionSuffix}
+                      onChange={(e) => handleSectionChange(e.target.value)}
+                      placeholder="e.g. 3A"
+                      required={role === "student"}
+                    />
+                  </InputGroup>
+                ) : (
+                  <Input
+                    id="section"
+                    value={form.section}
+                    onChange={(e) => set("section", e.target.value)}
+                    placeholder="Select a program first"
+                    required={role === "student"}
+                  />
+                )}
               </div>
             </div>
           )}

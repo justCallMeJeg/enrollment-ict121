@@ -37,7 +37,7 @@ export function SortMenu({
           Sorted by {currentLabel.toLowerCase()}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-52">
+      <DropdownMenuContent className="w-52">
         {options.map((opt) => (
           <DropdownMenuSub key={opt.value}>
             <DropdownMenuSubTrigger

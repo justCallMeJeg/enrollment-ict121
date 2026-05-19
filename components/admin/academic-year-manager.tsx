@@ -6,6 +6,13 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { ConfirmModal } from "@/components/shared/confirm-modal"
 import { FormModal } from "@/components/shared/form-modal"
 import { FilterDropdown } from "@/components/shared/filter-dropdown"
@@ -35,9 +42,36 @@ const SORT_OPTIONS = [
   { label: "Creation date", value: "created_at" },
 ]
 
+const SEMESTER_OPTIONS = [
+  { value: "1st", label: "1st Semester" },
+  { value: "2nd", label: "2nd Semester" },
+  { value: "Summer", label: "Summer" },
+]
+
+function deriveLabel(startYear: string, semester: string): string {
+  const sy = parseInt(startYear)
+  if (!sy) return ""
+  const range = `${sy}-${sy + 1}`
+  return semester === "Summer" ? `${range} Summer` : `${range} ${semester} Semester`
+}
+
+function parseLabel(label: string): { startYear: string; semester: string } {
+  const match = label.match(/^(\d{4})-\d{4}\s+(.+)$/)
+  if (!match) return { startYear: String(new Date().getFullYear()), semester: "1st" }
+  const sy = match[1]
+  const rest = match[2].trim()
+  const semester = rest.startsWith("1st")
+    ? "1st"
+    : rest.startsWith("2nd")
+    ? "2nd"
+    : "Summer"
+  return { startYear: sy, semester }
+}
+
 export function AcademicYearManager({ years }: { years: AcademicYear[] }) {
   const router = useRouter()
-  const [label, setLabel] = useState("")
+  const [startYear, setStartYear] = useState(String(new Date().getFullYear()))
+  const [semester, setSemester] = useState("1st")
   const [creating, setCreating] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<string | null>(null)
@@ -53,6 +87,8 @@ export function AcademicYearManager({ years }: { years: AcademicYear[] }) {
   const draft = years.find((y) => y.status === "draft")
   const upcoming = years.find((y) => y.status === "upcoming")
   const blocked = draft ?? upcoming
+
+  const derivedLabel = deriveLabel(startYear, semester)
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -77,13 +113,16 @@ export function AcademicYearManager({ years }: { years: AcademicYear[] }) {
   }, [years, search, filterStatus, sortBy, sortDir])
 
   function openCreate() {
-    setLabel("")
+    setStartYear(String(new Date().getFullYear()))
+    setSemester("1st")
     setEditTarget(null)
     setModalOpen(true)
   }
 
   function openEdit(year: AcademicYear) {
-    setLabel(year.label)
+    const parsed = parseLabel(year.label)
+    setStartYear(parsed.startYear)
+    setSemester(parsed.semester)
     setEditTarget(year.id)
     setModalOpen(true)
   }
@@ -91,11 +130,13 @@ export function AcademicYearManager({ years }: { years: AcademicYear[] }) {
   function closeModal() {
     setModalOpen(false)
     setEditTarget(null)
-    setLabel("")
+    setStartYear(String(new Date().getFullYear()))
+    setSemester("1st")
   }
 
   async function handleSubmit(e: { preventDefault(): void }) {
     e.preventDefault()
+    if (!derivedLabel) return
     setCreating(true)
     try {
       const url = editTarget
@@ -105,7 +146,7 @@ export function AcademicYearManager({ years }: { years: AcademicYear[] }) {
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ label }),
+        body: JSON.stringify({ label: derivedLabel }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
@@ -283,16 +324,43 @@ export function AcademicYearManager({ years }: { years: AcademicYear[] }) {
         submitLabel={editTarget ? "Save Changes" : "Create Academic Year"}
         loading={creating}
       >
-        <div className="space-y-2">
-          <Label htmlFor="ay-label">Label</Label>
-          <Input
-            id="ay-label"
-            placeholder="e.g. 2025-2026 1st Semester"
-            value={label}
-            onChange={(e) => setLabel(e.target.value)}
-            required
-          />
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="ay-year">Start Year</Label>
+            <Input
+              id="ay-year"
+              type="number"
+              min={2000}
+              max={2100}
+              step={1}
+              value={startYear}
+              onChange={(e) => setStartYear(e.target.value)}
+              placeholder="e.g. 2025"
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Semester</Label>
+            <Select value={semester} onValueChange={setSemester}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent position="popper">
+                {SEMESTER_OPTIONS.map((s) => (
+                  <SelectItem key={s.value} value={s.value}>
+                    {s.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
+        {derivedLabel && (
+          <p className="text-xs text-muted-foreground">
+            Label:{" "}
+            <span className="font-medium text-foreground">{derivedLabel}</span>
+          </p>
+        )}
       </FormModal>
 
       <ConfirmModal
@@ -356,7 +424,7 @@ function YearCard({
           onClick={() => onEdit(year)}
         >
           <Pencil className="size-3 mr-1" />
-          Edit label
+          Edit
         </Button>
 
         {year.status === "draft" && (

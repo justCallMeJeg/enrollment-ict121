@@ -2,14 +2,12 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import { ChevronDown } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -49,13 +47,13 @@ export function FilterDropdown({
   const isActive = selected.length > 0
 
   return (
-    <DropdownMenu open={open} onOpenChange={handleOpenChange}>
-      <DropdownMenuTrigger asChild>
+    <Popover open={open} onOpenChange={handleOpenChange}>
+      <PopoverTrigger asChild>
         <Button
           variant="outline"
           size="sm"
           className={cn(
-            "h-9 gap-1.5",
+            "h-9 gap-1.5 border-dashed",
             isActive && "border-primary text-primary"
           )}
         >
@@ -67,22 +65,26 @@ export function FilterDropdown({
           )}
           <ChevronDown className="size-3.5 text-muted-foreground" />
         </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-52">
-        <DropdownMenuLabel>Filter by {label.toLowerCase()}</DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        {options.map((opt) => (
-          <DropdownMenuCheckboxItem
-            key={opt.value}
-            checked={draft.includes(opt.value)}
-            onCheckedChange={() => toggle(opt.value)}
-            onSelect={(e) => e.preventDefault()}
-          >
-            {opt.label}
-          </DropdownMenuCheckboxItem>
-        ))}
-        <DropdownMenuSeparator />
-        <div className="flex gap-2 p-1">
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-52 p-0">
+        <div className="px-3 py-2 text-xs font-medium text-muted-foreground border-b">
+          Filter by {label.toLowerCase()}
+        </div>
+        <div className="p-2 space-y-0.5">
+          {options.map((opt) => (
+            <label
+              key={opt.value}
+              className="flex items-center gap-2.5 px-2 py-1.5 rounded-md cursor-pointer hover:bg-muted text-sm"
+            >
+              <Checkbox
+                checked={draft.includes(opt.value)}
+                onCheckedChange={() => toggle(opt.value)}
+              />
+              {opt.label}
+            </label>
+          ))}
+        </div>
+        <div className="flex gap-2 p-2 border-t">
           <Button
             variant="ghost"
             size="sm"
@@ -102,10 +104,10 @@ export function FilterDropdown({
               setOpen(false)
             }}
           >
-            Save
+            Apply
           </Button>
         </div>
-      </DropdownMenuContent>
-    </DropdownMenu>
+      </PopoverContent>
+    </Popover>
   )
 }

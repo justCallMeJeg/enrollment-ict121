@@ -12,6 +12,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupText,
+  InputGroupInput,
+} from "@/components/ui/input-group"
 import { Badge } from "@/components/ui/badge"
 import { DataTable } from "@/components/shared/data-table"
 import { ConfirmModal } from "@/components/shared/confirm-modal"
@@ -76,6 +82,27 @@ export function UserManager({
 
   function set(key: string, value: string) {
     setForm((prev) => ({ ...prev, [key]: value }))
+  }
+
+  function handleProgramChange(programId: string) {
+    const prog = programs.find((p) => p.id === programId)
+    const code = prog?.code ?? ""
+    set("program_id", programId)
+    // Only auto-prefix section in create mode (editTarget is null)
+    if (!editTarget) {
+      set("section", code ? `${code}-` : "")
+    }
+  }
+
+  const selectedProgram = programs.find((p) => p.id === form.program_id)
+  const sectionPrefix = role === "student" ? (selectedProgram?.code ?? "") : ""
+  const sectionSuffix =
+    sectionPrefix && form.section.startsWith(`${sectionPrefix}-`)
+      ? form.section.slice(sectionPrefix.length + 1)
+      : form.section
+
+  function handleSectionChange(val: string) {
+    set("section", sectionPrefix ? `${sectionPrefix}-${val}` : val)
   }
 
   function openCreate() {
@@ -248,7 +275,7 @@ export function UserManager({
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent position="popper">
                 <SelectItem value="student">Student</SelectItem>
                 <SelectItem value="professor">Professor</SelectItem>
               </SelectContent>
@@ -335,43 +362,64 @@ export function UserManager({
           <>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
+                <Label>Program</Label>
+                <Select
+                  value={form.program_id}
+                  onValueChange={handleProgramChange}
+                  required
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select program" />
+                  </SelectTrigger>
+                  <SelectContent position="popper">
+                    {programs.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.code} — {p.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
                 <Label>Year Level</Label>
                 <Select value={form.year_level} onValueChange={(v) => set("year_level", v)}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent position="popper">
                     {[1, 2, 3, 4, 5, 6].map((y) => (
                       <SelectItem key={y} value={String(y)}>Year {y}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="um-section">Section</Label>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="um-section">Section</Label>
+              {sectionPrefix ? (
+                <InputGroup className="h-9">
+                  <InputGroupAddon>
+                    <InputGroupText className="font-mono text-xs">
+                      {sectionPrefix}-
+                    </InputGroupText>
+                  </InputGroupAddon>
+                  <InputGroupInput
+                    id="um-section"
+                    value={sectionSuffix}
+                    onChange={(e) => handleSectionChange(e.target.value)}
+                    placeholder="e.g. 3A"
+                    required
+                  />
+                </InputGroup>
+              ) : (
                 <Input
                   id="um-section"
                   value={form.section}
                   onChange={(e) => set("section", e.target.value)}
-                  placeholder="e.g. A, BSCS-3A"
+                  placeholder="Select a program first"
                   required
                 />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Program</Label>
-              <Select value={form.program_id} onValueChange={(v) => set("program_id", v)} required>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select program" />
-                </SelectTrigger>
-                <SelectContent>
-                  {programs.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.code} — {p.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              )}
             </div>
           </>
         )}
