@@ -49,6 +49,6 @@ export async function POST(
     return NextResponse.json({ error: updateError.message }, { status: 500 })
   }
 
-  revalidateTag("academic-years")
+  revalidateTag("academic-years", "max")
   return NextResponse.json({ ok: true })
 }

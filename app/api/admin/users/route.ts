@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server"
+﻿import { NextRequest, NextResponse } from "next/server"
 import { getSupabaseServerClient } from "@/lib/supabase/server"
 import { hashPassword } from "@/lib/auth/password"
 import { revalidateTag } from "next/cache"
@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  revalidateTag("users")
-  revalidateTag("stats")
+  revalidateTag("users", "max")
+  revalidateTag("stats", "max")
   return NextResponse.json({ id: user.id }, { status: 201 })
 }

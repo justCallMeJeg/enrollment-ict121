@@ -17,6 +17,6 @@ export async function PATCH(
     .select()
     .single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  revalidateTag("academic-years")
+  revalidateTag("academic-years", "max")
   return NextResponse.json(data)
 }

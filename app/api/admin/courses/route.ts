@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server"
+﻿import { NextRequest, NextResponse } from "next/server"
 import { getSupabaseServerClient } from "@/lib/supabase/server"
 import { revalidateTag } from "next/cache"
 
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
     }
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
-  revalidateTag("courses")
-  revalidateTag("stats")
+  revalidateTag("courses", "max")
+  revalidateTag("stats", "max")
   return NextResponse.json(data, { status: 201 })
 }

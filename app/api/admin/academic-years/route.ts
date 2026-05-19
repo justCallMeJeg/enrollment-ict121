@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server"
+﻿import { NextRequest, NextResponse } from "next/server"
 import { getSupabaseServerClient } from "@/lib/supabase/server"
 import { revalidateTag } from "next/cache"
 
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
       .eq("academic_year_id", sourceYear.id)
 
     if (sourceCourses && sourceCourses.length > 0) {
-      // Pass 1: insert all courses without prerequisites; build code → new_id map
+      // Pass 1: insert all courses without prerequisites; build code -> new_id map
       const pass1Inserts = sourceCourses.map((c) => ({
         academic_year_id: newYear.id,
         program_id: c.program_id,
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
         .select("id, course_code")
 
       if (inserted && inserted.length > 0) {
-        // Map course_code → new course id within this year
+        // Map course_code â†’ new course id within this year
         const codeToNewId = new Map(inserted.map((c) => [c.course_code, c.id]))
 
         // Pass 2: resolve prerequisites by matching course_code
@@ -120,6 +120,6 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  revalidateTag("academic-years")
+  revalidateTag("academic-years", "max")
   return NextResponse.json(newYear, { status: 201 })
 }
