@@ -56,6 +56,7 @@ export type Program = {
 
 export type Course = {
   id: string
+  academic_year_id: string
   program_id: string
   professor_id: string | null
   course_code: string
@@ -69,7 +70,13 @@ export type Course = {
   prerequisite?: Course | null
 }
 
-export type AcademicYearStatus = "upcoming" | "active" | "ended"
+export type AcademicYearStatus = "draft" | "upcoming" | "active" | "ended"
+
+export type AdminYearContext = {
+  id: string
+  label: string
+  status: AcademicYearStatus
+}
 
 export type AcademicYear = {
   id: string

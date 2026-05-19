@@ -7,10 +7,22 @@ export async function PATCH(
 ) {
   const { id } = await params
   const body = await request.json()
+  // Allowlist patchable fields; academic_year_id is immutable after creation
+  const { program_id, professor_id, course_code, name, semester, units, year_level, prerequisite_course_id } = body
+  const patch: Record<string, unknown> = {}
+  if (program_id !== undefined) patch.program_id = program_id
+  if (professor_id !== undefined) patch.professor_id = professor_id ?? null
+  if (course_code !== undefined) patch.course_code = course_code
+  if (name !== undefined) patch.name = name
+  if (semester !== undefined) patch.semester = semester
+  if (units !== undefined) patch.units = units
+  if (year_level !== undefined) patch.year_level = year_level
+  if (prerequisite_course_id !== undefined) patch.prerequisite_course_id = prerequisite_course_id ?? null
+
   const supabase = await getSupabaseServerClient()
   const { data, error } = await supabase
     .from("courses")
-    .update(body)
+    .update(patch)
     .eq("id", id)
     .select()
     .single()

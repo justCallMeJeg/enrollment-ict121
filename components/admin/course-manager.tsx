@@ -60,10 +60,12 @@ export function CourseManager({
   courses,
   programs,
   professors,
+  academicYearId,
 }: {
   courses: CourseRow[]
   programs: Pick<Program, "id" | "name" | "code">[]
   professors: ProfessorOption[]
+  academicYearId: string
 }) {
   const router = useRouter()
   const [form, setForm] = useState(INIT_FORM)
@@ -134,6 +136,8 @@ export function CourseManager({
           form.prerequisite_course_id && form.prerequisite_course_id !== "none"
             ? form.prerequisite_course_id
             : null,
+        // Only include academic_year_id on create — PATCH ignores it
+        ...(!editTarget && { academic_year_id: academicYearId }),
       }
       const url = editTarget ? `/api/admin/courses/${editTarget}` : "/api/admin/courses"
       const method = editTarget ? "PATCH" : "POST"

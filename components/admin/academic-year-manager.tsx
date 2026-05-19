@@ -11,7 +11,7 @@ import { FormModal } from "@/components/shared/form-modal"
 import { TableToolbar } from "@/components/shared/table-toolbar"
 import { DataTable } from "@/components/shared/data-table"
 import type { AcademicYear } from "@/types"
-import { Pencil, Plus, Zap } from "lucide-react"
+import { BookOpen, Pencil, Plus, Zap } from "lucide-react"
 import { IconButton } from "@/components/shared/icon-button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { toast } from "sonner"
@@ -19,6 +19,7 @@ import { toast } from "sonner"
 const STATUS_BADGE: Record<string, "default" | "secondary" | "outline"> = {
   active: "default",
   upcoming: "secondary",
+  draft: "outline",
   ended: "outline",
 }
 
@@ -30,10 +31,14 @@ export function AcademicYearManager({ years }: { years: AcademicYear[] }) {
   const [editTarget, setEditTarget] = useState<string | null>(null)
   const [activateTarget, setActivateTarget] = useState<AcademicYear | null>(null)
   const [activating, setActivating] = useState(false)
+  const [openTarget, setOpenTarget] = useState<AcademicYear | null>(null)
+  const [opening, setOpening] = useState(false)
   const [search, setSearch] = useState("")
   const [filterStatus, setFilterStatus] = useState("all")
 
+  const draft = years.find((y) => y.status === "draft")
   const upcoming = years.find((y) => y.status === "upcoming")
+  const blocked = draft ?? upcoming
 
   const filtered = useMemo(() => {
     return years.filter((y) => {
@@ -86,6 +91,26 @@ export function AcademicYearManager({ years }: { years: AcademicYear[] }) {
     }
   }
 
+  async function handleOpen() {
+    if (!openTarget) return
+    setOpening(true)
+    try {
+      const res = await fetch(
+        `/api/admin/academic-years/${openTarget.id}/open`,
+        { method: "POST" }
+      )
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      toast.success("Pre-enrollment opened")
+      setOpenTarget(null)
+      router.refresh()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to open pre-enrollment")
+    } finally {
+      setOpening(false)
+    }
+  }
+
   async function handleActivate() {
     if (!activateTarget) return
     setActivating(true)
@@ -119,6 +144,7 @@ export function AcademicYearManager({ years }: { years: AcademicYear[] }) {
             key: "status",
             placeholder: "All Statuses",
             options: [
+              { label: "Draft", value: "draft" },
               { label: "Upcoming", value: "upcoming" },
               { label: "Active", value: "active" },
               { label: "Ended", value: "ended" },
@@ -132,7 +158,7 @@ export function AcademicYearManager({ years }: { years: AcademicYear[] }) {
         action={
           <Tooltip>
             <TooltipTrigger asChild>
-              {upcoming ? (
+              {blocked ? (
                 <span className="inline-flex" tabIndex={0}>
                   <Button size="sm" disabled>
                     <Plus className="size-4 mr-2" />
@@ -147,7 +173,11 @@ export function AcademicYearManager({ years }: { years: AcademicYear[] }) {
               )}
             </TooltipTrigger>
             <TooltipContent sideOffset={4}>
-              {upcoming ? "Activate the upcoming year before creating another" : "Create a new upcoming academic year"}
+              {blocked
+                ? draft
+                  ? "A draft year already exists — open it for pre-enrollment first"
+                  : "Activate the upcoming year before creating another"
+                : "Create a new draft academic year"}
             </TooltipContent>
           </Tooltip>
         }
@@ -164,7 +194,7 @@ export function AcademicYearManager({ years }: { years: AcademicYear[] }) {
             render: (row) => {
               const year = row as unknown as AcademicYear
               return (
-                <Badge variant={STATUS_BADGE[year.status] ?? "outline"}>
+                <Badge variant={STATUS_BADGE[year.status] ?? "outline"} className="capitalize">
                   {year.status}
                 </Badge>
               )
@@ -180,6 +210,23 @@ export function AcademicYearManager({ years }: { years: AcademicYear[] }) {
                   <IconButton tooltip="Edit label" className="hover:text-foreground" onClick={() => openEdit(year)}>
                     <Pencil className="size-3.5" />
                   </IconButton>
+                  {year.status === "draft" && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setOpenTarget(year)}
+                        >
+                          <BookOpen className="size-3 mr-1" />
+                          Open Pre-Enrollment
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent sideOffset={4}>
+                        Allow students to pre-enroll for this academic year
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
                   {year.status === "upcoming" && (
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -227,10 +274,21 @@ export function AcademicYearManager({ years }: { years: AcademicYear[] }) {
       </FormModal>
 
       <ConfirmModal
+        open={!!openTarget}
+        onOpenChange={(open) => !open && setOpenTarget(null)}
+        title="Open Pre-Enrollment"
+        description={`Opening "${openTarget?.label}" for pre-enrollment will allow students to select courses. You can activate the year once pre-enrollment is complete.`}
+        confirmLabel="Open Pre-Enrollment"
+        variant="default"
+        onConfirm={handleOpen}
+        loading={opening}
+      />
+
+      <ConfirmModal
         open={!!activateTarget}
         onOpenChange={(open) => !open && setActivateTarget(null)}
         title="Activate Academic Year"
-        description={`Activating "${activateTarget?.label}" will end the current active year and convert all pending pre-enrollments to enrollments. This cannot be undone.`}
+        description={`Activating "${activateTarget?.label}" will end the current active year, convert all pending pre-enrollments to enrollments, and advance all students to the next year level. This cannot be undone.`}
         confirmLabel="Activate"
         variant="default"
         onConfirm={handleActivate}

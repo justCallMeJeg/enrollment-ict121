@@ -67,5 +67,8 @@ export async function POST(
     }
   }
 
+  // Increment all students' year_level by 1 (capped at 6)
+  await supabase.rpc("increment_student_year_levels")
+
   return NextResponse.json({ ok: true })
 }

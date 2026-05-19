@@ -21,7 +21,13 @@ function getInitials(name: string) {
     .toUpperCase()
 }
 
-export function Header({ user }: { user: SessionPayload }) {
+export function Header({
+  user,
+  yearSwitcher,
+}: {
+  user: SessionPayload
+  yearSwitcher?: React.ReactNode
+}) {
   const router = useRouter()
 
   async function handleLogout() {
@@ -37,6 +43,7 @@ export function Header({ user }: { user: SessionPayload }) {
           {process.env.NEXT_PUBLIC_APP_NAME ?? "Enrollment System"}
         </span>
       </div>
+      {yearSwitcher && <div className="flex items-center">{yearSwitcher}</div>}
       <div className="flex-1" />
       <DropdownMenu>
         <DropdownMenuTrigger asChild>

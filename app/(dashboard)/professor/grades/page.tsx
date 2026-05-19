@@ -2,21 +2,37 @@ import { getSupabaseServerClient } from "@/lib/supabase/server"
 import { headers } from "next/headers"
 import { PageHeader } from "@/components/shared/page-header"
 import { GradeTable } from "@/components/professor/grade-table"
+import { YearFilter } from "@/components/professor/year-filter"
 import { EmptyState } from "@/components/shared/empty-state"
 
-export default async function ProfessorGradesPage() {
+export default async function ProfessorGradesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ year_id?: string }>
+}) {
+  const { year_id } = await searchParams
   const headersList = await headers()
   const userId = headersList.get("x-user-id")!
 
   const supabase = await getSupabaseServerClient()
 
-  const { data: activeYear } = await supabase
+  // Fetch years that have grade data (active + ended) for the filter
+  const { data: availableYears } = await supabase
     .from("academic_years")
-    .select("id, label")
-    .eq("status", "active")
-    .single()
+    .select("id, label, status")
+    .in("status", ["active", "ended"])
+    .order("created_at", { ascending: false })
 
-  if (!activeYear) {
+  const years = availableYears ?? []
+
+  // Resolve selected year: use param → active year → most recent ended
+  const selectedYear =
+    (year_id ? years.find((y) => y.id === year_id) : null) ??
+    years.find((y) => y.status === "active") ??
+    years[0] ??
+    null
+
+  if (!selectedYear) {
     return (
       <div>
         <PageHeader
@@ -36,7 +52,7 @@ export default async function ProfessorGradesPage() {
     .select(
       "id, status, courses(id, course_code, name, professor_id), students(student_id, section, users(name)), grades(id, grade, remarks)"
     )
-    .eq("academic_year_id", activeYear.id)
+    .eq("academic_year_id", selectedYear.id)
     .eq("status", "enrolled")
     .eq("courses.professor_id", userId)
     .order("created_at")
@@ -47,8 +63,13 @@ export default async function ProfessorGradesPage() {
     <div>
       <PageHeader
         title="Grade Management"
-        description={`Grades for ${activeYear.label}`}
+        description={`Grades for ${selectedYear.label}`}
       />
+      {years.length > 1 && (
+        <div className="mb-4">
+          <YearFilter years={years} selectedId={selectedYear.id} />
+        </div>
+      )}
       {filtered.length === 0 ? (
         <EmptyState
           title="No enrolled students"

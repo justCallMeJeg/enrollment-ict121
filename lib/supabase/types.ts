@@ -71,6 +71,7 @@ export type Database = {
       courses: {
         Row: {
           id: string
+          academic_year_id: string
           program_id: string
           professor_id: string | null
           course_code: string
@@ -87,7 +88,7 @@ export type Database = {
         Row: {
           id: string
           label: string
-          status: "upcoming" | "active" | "ended"
+          status: "draft" | "upcoming" | "active" | "ended"
           start_date: string | null
           end_date: string | null
           created_at: string

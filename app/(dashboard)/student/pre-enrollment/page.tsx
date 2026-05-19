@@ -42,9 +42,11 @@ export default async function PreEnrollmentPage() {
     return <EmptyState title="Student profile not found" />
   }
 
+  // Courses are now scoped to the upcoming academic year
   const { data: courses } = await supabase
     .from("courses")
     .select("*, professors(faculty_id, users(name)), prerequisite:prerequisite_course_id(id, course_code, name)")
+    .eq("academic_year_id", upcomingYear.id)
     .eq("program_id", student.program_id)
     .eq("year_level", student.year_level)
     .order("course_code")
@@ -58,24 +60,29 @@ export default async function PreEnrollmentPage() {
 
   const preEnrolledIds = new Set((preEnrolled ?? []).map((p) => p.course_id))
 
-  // Check prerequisites for each course
+  // Check prerequisites cross-year by course_code, not by UUID.
+  // A student may have passed the prerequisite in a previous year (different course UUID,
+  // same course_code), so we look up by code across all their enrollments.
   const coursesWithEligibility: CourseWithEligibility[] = await Promise.all(
     (courses ?? []).map(async (course) => {
-      const prereqId = (course as { prerequisite?: { id: string } | null }).prerequisite?.id
+      const prereq = (course as { prerequisite?: { course_code: string } | null }).prerequisite
       let eligible = true
-      if (prereqId) {
-        const { data: passingGrade } = await supabase
-          .from("enrollments")
-          .select("id, grades(grade)")
-          .eq("student_id", userId)
-          .eq("course_id", prereqId)
-          .eq("status", "enrolled")
-          .single()
 
-        const grade = passingGrade?.grades
-          ? Array.isArray(passingGrade.grades)
-            ? passingGrade.grades[0]?.grade
-            : (passingGrade.grades as { grade: number | null })?.grade
+      if (prereq?.course_code) {
+        const { data: passingEnrollment } = await supabase
+          .from("enrollments")
+          .select("id, grades(grade), courses!inner(course_code)")
+          .eq("student_id", userId)
+          .eq("status", "enrolled")
+          .eq("courses.course_code", prereq.course_code)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle()
+
+        const grade = passingEnrollment?.grades
+          ? Array.isArray(passingEnrollment.grades)
+            ? passingEnrollment.grades[0]?.grade
+            : (passingEnrollment.grades as { grade: number | null })?.grade
           : null
 
         eligible = grade !== null && grade !== undefined && grade <= 3.0
