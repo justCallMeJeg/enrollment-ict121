@@ -18,7 +18,7 @@ import { FormModal } from "@/components/shared/form-modal"
 import { FilterDropdown } from "@/components/shared/filter-dropdown"
 import { SortMenu } from "@/components/shared/sort-menu"
 import type { AcademicYear } from "@/types"
-import { BookOpen, Pencil, Plus, Search, X, Zap } from "lucide-react"
+import { BookOpen, Pencil, Plus, Search, Trash2, X, Zap } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
@@ -79,6 +79,8 @@ export function AcademicYearManager({ years }: { years: AcademicYear[] }) {
   const [activating, setActivating] = useState(false)
   const [openTarget, setOpenTarget] = useState<AcademicYear | null>(null)
   const [opening, setOpening] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<AcademicYear | null>(null)
+  const [deleting, setDeleting] = useState(false)
   const [search, setSearch] = useState("")
   const [filterStatus, setFilterStatus] = useState<string[]>([])
   const [sortBy, setSortBy] = useState("created_at")
@@ -202,6 +204,23 @@ export function AcademicYearManager({ years }: { years: AcademicYear[] }) {
     }
   }
 
+  async function handleDelete() {
+    if (!deleteTarget) return
+    setDeleting(true)
+    try {
+      const res = await fetch(`/api/admin/academic-years/${deleteTarget.id}`, { method: "DELETE" })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      toast.success("Academic year deleted")
+      setDeleteTarget(null)
+      router.refresh()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete")
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   const hasFilters = search || filterStatus.length > 0
 
   return (
@@ -308,6 +327,7 @@ export function AcademicYearManager({ years }: { years: AcademicYear[] }) {
               onEdit={openEdit}
               onOpen={setOpenTarget}
               onActivate={setActivateTarget}
+              onDelete={setDeleteTarget}
             />
           ))}
         </div>
@@ -326,7 +346,7 @@ export function AcademicYearManager({ years }: { years: AcademicYear[] }) {
       >
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="ay-year">Start Year</Label>
+            <Label htmlFor="ay-year">Start Year <span className="text-destructive">*</span></Label>
             <Input
               id="ay-year"
               type="number"
@@ -340,7 +360,7 @@ export function AcademicYearManager({ years }: { years: AcademicYear[] }) {
             />
           </div>
           <div className="space-y-2">
-            <Label>Semester</Label>
+            <Label>Semester <span className="text-destructive">*</span></Label>
             <Select value={semester} onValueChange={setSemester}>
               <SelectTrigger>
                 <SelectValue />
@@ -384,6 +404,16 @@ export function AcademicYearManager({ years }: { years: AcademicYear[] }) {
         onConfirm={handleActivate}
         loading={activating}
       />
+
+      <ConfirmModal
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="Delete Academic Year"
+        description={`Are you sure you want to delete "${deleteTarget?.label}"? All courses created under this year will also be deleted.`}
+        confirmLabel="Delete"
+        onConfirm={handleDelete}
+        loading={deleting}
+      />
     </div>
   )
 }
@@ -393,11 +423,13 @@ function YearCard({
   onEdit,
   onOpen,
   onActivate,
+  onDelete,
 }: {
   year: AcademicYear
   onEdit: (year: AcademicYear) => void
   onOpen: (year: AcademicYear) => void
   onActivate: (year: AcademicYear) => void
+  onDelete: (year: AcademicYear) => void
 }) {
   return (
     <div
@@ -426,6 +458,18 @@ function YearCard({
           <Pencil className="size-3 mr-1" />
           Edit
         </Button>
+
+        {year.status === "draft" && (
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive"
+            onClick={() => onDelete(year)}
+          >
+            <Trash2 className="size-3 mr-1" />
+            Delete
+          </Button>
+        )}
 
         {year.status === "draft" && (
           <Tooltip>

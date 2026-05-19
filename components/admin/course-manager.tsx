@@ -36,7 +36,7 @@ type CourseRow = {
   semester: string
   units: number
   year_level: number
-  program_id: string
+  program_id: string | null
   professor_id: string | null
   prerequisite_course_id: string | null
   programs: { name: string; code: string } | null
@@ -91,7 +91,7 @@ export function CourseManager({
       const matchesYear =
         filterYear.length === 0 || filterYear.includes(String(c.year_level))
       const matchesProgram =
-        filterProgram.length === 0 || filterProgram.includes(c.program_id)
+        filterProgram.length === 0 || c.program_id === null || filterProgram.includes(c.program_id)
       return matchesSearch && matchesSemester && matchesYear && matchesProgram
     })
   }, [courses, search, filterSemester, filterYear, filterProgram])
@@ -108,7 +108,7 @@ export function CourseManager({
 
   function openEdit(row: CourseRow) {
     setForm({
-      program_id: row.program_id,
+      program_id: row.program_id ?? "",
       professor_id: row.professor_id ?? "",
       course_code: row.course_code,
       name: row.name,
@@ -135,6 +135,7 @@ export function CourseManager({
         ...form,
         units: Number(form.units),
         year_level: Number(form.year_level),
+        program_id: form.program_id || null,
         professor_id: form.professor_id || null,
         prerequisite_course_id: form.prerequisite_course_id || null,
         ...(!editTarget && { academic_year_id: academicYearId }),
@@ -303,7 +304,7 @@ export function CourseManager({
       >
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="course_code">Course Code</Label>
+            <Label htmlFor="course_code">Course Code <span className="text-destructive">*</span></Label>
             <Input
               id="course_code"
               value={form.course_code}
@@ -313,7 +314,7 @@ export function CourseManager({
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="course_name">Course Name</Label>
+            <Label htmlFor="course_name">Course Name <span className="text-destructive">*</span></Label>
             <Input
               id="course_name"
               value={form.name}
@@ -325,14 +326,15 @@ export function CourseManager({
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label>Program</Label>
+            <Label>Program <span className="text-xs text-muted-foreground font-normal">(optional — leave blank for all programs)</span></Label>
             <Combobox
               options={programs.map((p) => ({ value: p.id, label: p.name, code: p.code }))}
               value={form.program_id}
               onValueChange={(v) => set("program_id", v)}
-              placeholder="Select program"
+              placeholder="All programs"
               searchPlaceholder="Search programs…"
               emptyText="No programs found."
+              clearable
             />
           </div>
           <div className="space-y-2">
@@ -350,7 +352,7 @@ export function CourseManager({
         </div>
         <div className="grid grid-cols-3 gap-4">
           <div className="space-y-2">
-            <Label>Semester</Label>
+            <Label>Semester <span className="text-destructive">*</span></Label>
             <Select value={form.semester} onValueChange={(v) => set("semester", v)}>
               <SelectTrigger>
                 <SelectValue />
@@ -365,7 +367,7 @@ export function CourseManager({
             </Select>
           </div>
           <div className="space-y-2">
-            <Label>Year Level</Label>
+            <Label>Year Level <span className="text-destructive">*</span></Label>
             <Select value={form.year_level} onValueChange={(v) => set("year_level", v)}>
               <SelectTrigger>
                 <SelectValue />
@@ -378,7 +380,7 @@ export function CourseManager({
             </Select>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="units">Units</Label>
+            <Label htmlFor="units">Units <span className="text-destructive">*</span></Label>
             <Input
               id="units"
               type="number"

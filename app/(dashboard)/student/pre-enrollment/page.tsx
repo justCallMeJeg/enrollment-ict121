@@ -42,13 +42,22 @@ export default async function PreEnrollmentPage() {
     return <EmptyState title="Student profile not found" />
   }
 
-  // Courses are now scoped to the upcoming academic year
+  // Derive semester from the upcoming year's label (e.g. "2024-2025 1st Semester" → "1st")
+  const upcomingSemester: "1st" | "2nd" | "summer" = upcomingYear.label.includes("1st")
+    ? "1st"
+    : upcomingYear.label.includes("2nd")
+    ? "2nd"
+    : "summer"
+
+  // Courses scoped to upcoming year, student's program/year level, and the year's semester.
+  // Courses with null program_id are cross-program (applicable to all students).
   const { data: courses } = await supabase
     .from("courses")
     .select("*, professors(faculty_id, users(name)), prerequisite:prerequisite_course_id(id, course_code, name)")
     .eq("academic_year_id", upcomingYear.id)
-    .eq("program_id", student.program_id)
+    .or(`program_id.eq.${student.program_id},program_id.is.null`)
     .eq("year_level", student.year_level)
+    .eq("semester", upcomingSemester)
     .order("course_code")
 
   const { data: preEnrolled } = await supabase

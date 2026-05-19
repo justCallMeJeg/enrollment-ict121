@@ -103,7 +103,7 @@ export function CreateUserForm({ programs }: Props) {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Role</Label>
+              <Label>Role <span className="text-destructive">*</span></Label>
               <Select
                 value={role}
                 onValueChange={(v) => setRole(v as "student" | "professor")}
@@ -118,7 +118,7 @@ export function CreateUserForm({ programs }: Props) {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="name">Full Name</Label>
+              <Label htmlFor="name">Full Name <span className="text-destructive">*</span></Label>
               <Input
                 id="name"
                 value={form.name}
@@ -128,7 +128,7 @@ export function CreateUserForm({ programs }: Props) {
             </div>
             <div className="space-y-2">
               <Label htmlFor="id_number">
-                {role === "student" ? "Student ID" : "Faculty ID"}
+                {role === "student" ? "Student ID" : "Faculty ID"} <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="id_number"
@@ -139,7 +139,7 @@ export function CreateUserForm({ programs }: Props) {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">Email <span className="text-destructive">*</span></Label>
               <Input
                 id="email"
                 type="email"
@@ -149,7 +149,7 @@ export function CreateUserForm({ programs }: Props) {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">Password <span className="text-destructive">*</span></Label>
               <Input
                 id="password"
                 type="password"
@@ -172,7 +172,7 @@ export function CreateUserForm({ programs }: Props) {
           {role === "student" && (
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label>Year Level</Label>
+                <Label>Year Level <span className="text-destructive">*</span></Label>
                 <Select
                   value={form.year_level}
                   onValueChange={(v) => set("year_level", v)}
@@ -190,7 +190,7 @@ export function CreateUserForm({ programs }: Props) {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Program</Label>
+                <Label>Program <span className="text-destructive">*</span></Label>
                 <Combobox
                   options={programs.map((p) => ({ value: p.id, label: p.name, code: p.code }))}
                   value={form.program_id}
@@ -201,7 +201,7 @@ export function CreateUserForm({ programs }: Props) {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="section">Section</Label>
+                <Label htmlFor="section">Section <span className="text-destructive">*</span></Label>
                 {sectionPrefix ? (
                   <InputGroup className="h-9">
                     <InputGroupAddon>

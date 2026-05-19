@@ -266,7 +266,7 @@ export function UserManager({
       >
         {/* Role row */}
         <div className="space-y-2">
-          <Label>Role</Label>
+          <Label>Role <span className="text-destructive">*</span></Label>
           {editTarget ? (
             <div className="flex h-9 items-center px-3 rounded-md border bg-muted text-sm capitalize text-muted-foreground">
               {role}
@@ -288,7 +288,7 @@ export function UserManager({
         {!editTarget ? (
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="um-name">Full Name</Label>
+              <Label htmlFor="um-name">Full Name <span className="text-destructive">*</span></Label>
               <Input
                 id="um-name"
                 value={form.name}
@@ -297,7 +297,7 @@ export function UserManager({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="um-id">{role === "student" ? "Student ID" : "Faculty ID"}</Label>
+              <Label htmlFor="um-id">{role === "student" ? "Student ID" : "Faculty ID"} <span className="text-destructive">*</span></Label>
               <Input
                 id="um-id"
                 value={form.id_number}
@@ -309,7 +309,7 @@ export function UserManager({
           </div>
         ) : (
           <div className="space-y-2">
-            <Label htmlFor="um-name">Full Name</Label>
+            <Label htmlFor="um-name">Full Name <span className="text-destructive">*</span></Label>
             <Input
               id="um-name"
               value={form.name}
@@ -322,7 +322,7 @@ export function UserManager({
         {/* Email + Password */}
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="um-email">Email</Label>
+            <Label htmlFor="um-email">Email <span className="text-destructive">*</span></Label>
             <Input
               id="um-email"
               type="email"
@@ -333,7 +333,7 @@ export function UserManager({
           </div>
           <div className="space-y-2">
             <Label htmlFor="um-password">
-              {editTarget ? "Password (optional)" : "Password"}
+              {editTarget ? "Password (optional)" : <>Password <span className="text-destructive">*</span></>}
             </Label>
             <Input
               id="um-password"
@@ -363,7 +363,7 @@ export function UserManager({
           <>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Program</Label>
+                <Label>Program <span className="text-destructive">*</span></Label>
                 <Combobox
                   options={programs.map((p) => ({ value: p.id, label: p.name, code: p.code }))}
                   value={form.program_id}
@@ -374,7 +374,7 @@ export function UserManager({
                 />
               </div>
               <div className="space-y-2">
-                <Label>Year Level</Label>
+                <Label>Year Level <span className="text-destructive">*</span></Label>
                 <Select value={form.year_level} onValueChange={(v) => set("year_level", v)}>
                   <SelectTrigger>
                     <SelectValue />
@@ -388,7 +388,7 @@ export function UserManager({
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="um-section">Section</Label>
+              <Label htmlFor="um-section">Section <span className="text-destructive">*</span></Label>
               {sectionPrefix ? (
                 <InputGroup className="h-9">
                   <InputGroupAddon>

@@ -204,7 +204,7 @@ export function ProgramManager({
         loading={loading}
       >
         <div className="space-y-2">
-          <Label>Department</Label>
+          <Label>Department <span className="text-destructive">*</span></Label>
           <Combobox
             options={departments.map((d) => ({ value: d.id, label: d.name, code: d.code }))}
             value={form.department_id}
@@ -216,7 +216,7 @@ export function ProgramManager({
         </div>
         <div className="grid grid-cols-[1fr_auto] gap-4 items-start">
           <div className="space-y-2">
-            <Label htmlFor="prog-name">Program Name</Label>
+            <Label htmlFor="prog-name">Program Name <span className="text-destructive">*</span></Label>
             <Input
               id="prog-name"
               value={form.name}
@@ -226,7 +226,7 @@ export function ProgramManager({
             />
           </div>
           <div className="space-y-2 w-24">
-            <Label htmlFor="prog-code">Code</Label>
+            <Label htmlFor="prog-code">Code <span className="text-destructive">*</span></Label>
             <Input
               id="prog-code"
               value={form.code}

@@ -190,7 +190,7 @@ export function DepartmentManager({
         loading={loading}
       >
         <div className="space-y-2">
-          <Label>College</Label>
+          <Label>College <span className="text-destructive">*</span></Label>
           <Combobox
             options={colleges.map((c) => ({ value: c.id, label: c.name, code: c.code }))}
             value={form.college_id}
@@ -202,7 +202,7 @@ export function DepartmentManager({
         </div>
         <div className="grid grid-cols-[1fr_auto] gap-4 items-start">
           <div className="space-y-2">
-            <Label htmlFor="dept-name">Department Name</Label>
+            <Label htmlFor="dept-name">Department Name <span className="text-destructive">*</span></Label>
             <Input
               id="dept-name"
               value={form.name}
@@ -212,7 +212,7 @@ export function DepartmentManager({
             />
           </div>
           <div className="space-y-2 w-28">
-            <Label htmlFor="dept-code">Code</Label>
+            <Label htmlFor="dept-code">Code <span className="text-destructive">*</span></Label>
             <Input
               id="dept-code"
               value={form.code}

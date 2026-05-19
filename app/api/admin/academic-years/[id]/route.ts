@@ -2,6 +2,34 @@ import { NextRequest, NextResponse } from "next/server"
 import { getSupabaseServerClient } from "@/lib/supabase/server"
 import { revalidateTag } from "next/cache"
 
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params
+  const supabase = await getSupabaseServerClient()
+
+  // Guard: only draft years may be deleted
+  const { data: year } = await supabase
+    .from("academic_years")
+    .select("status")
+    .eq("id", id)
+    .single()
+
+  if (!year) return NextResponse.json({ error: "Not found" }, { status: 404 })
+  if (year.status !== "draft") {
+    return NextResponse.json(
+      { error: "Only draft academic years can be deleted" },
+      { status: 400 }
+    )
+  }
+
+  const { error } = await supabase.from("academic_years").delete().eq("id", id)
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  revalidateTag("academic-years", "max")
+  return NextResponse.json({ ok: true })
+}
+
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

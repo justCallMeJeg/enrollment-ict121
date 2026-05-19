@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     prerequisite_course_id,
   } = body
 
-  if (!academic_year_id || !program_id || !course_code || !name || !semester) {
+  if (!academic_year_id || !course_code || !name || !semester) {
     return NextResponse.json({ error: "Required fields missing" }, { status: 400 })
   }
 
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     .from("courses")
     .insert({
       academic_year_id,
-      program_id,
+      program_id: program_id ?? null,
       professor_id: professor_id ?? null,
       course_code,
       name,
