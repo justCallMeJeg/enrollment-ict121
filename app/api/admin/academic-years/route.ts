@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getSupabaseServerClient } from "@/lib/supabase/server"
+import { revalidateTag } from "next/cache"
 
 export async function GET() {
   const supabase = await getSupabaseServerClient()
@@ -119,5 +120,6 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  revalidateTag("academic-years")
   return NextResponse.json(newYear, { status: 201 })
 }

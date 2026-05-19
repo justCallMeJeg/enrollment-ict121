@@ -1,21 +1,40 @@
 import { cookies } from "next/headers"
-import { getSupabaseServerClient } from "@/lib/supabase/server"
+import { unstable_cache } from "next/cache"
+import { createClient } from "@supabase/supabase-js"
+import { cache } from "react"
 import type { AdminYearContext } from "@/types"
 
-export async function getAdminYearContext(): Promise<{
+// Cookie-free Supabase client safe for use inside unstable_cache
+function makeClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_SECRET_SUPABASE_ANON_KEY!
+  )
+}
+
+// Cross-request cache: persists until revalidateTag('academic-years') is called
+const fetchYears = unstable_cache(
+  async (): Promise<AdminYearContext[]> => {
+    const supabase = makeClient()
+    const { data } = await supabase
+      .from("academic_years")
+      .select("id, label, status")
+      .order("created_at", { ascending: false })
+    return (data ?? []) as AdminYearContext[]
+  },
+  ["academic-years"],
+  { tags: ["academic-years"] }
+)
+
+// Within-request cache: deduplicates layout + page calls in the same render
+export const getAdminYearContext = cache(async (): Promise<{
   year: AdminYearContext | null
   years: AdminYearContext[]
-}> {
+}> => {
   const cookieStore = await cookies()
   const cookieId = cookieStore.get("admin-year-id")?.value
 
-  const supabase = await getSupabaseServerClient()
-  const { data } = await supabase
-    .from("academic_years")
-    .select("id, label, status")
-    .order("created_at", { ascending: false })
-
-  const years = (data ?? []) as AdminYearContext[]
+  const years = await fetchYears()
 
   if (years.length === 0) return { year: null, years: [] }
 
@@ -30,4 +49,4 @@ export async function getAdminYearContext(): Promise<{
     years[0]
 
   return { year: year ?? null, years }
-}
+})

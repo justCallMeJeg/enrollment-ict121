@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getSupabaseServerClient } from "@/lib/supabase/server"
+import { revalidateTag } from "next/cache"
 
 export async function POST(
   _request: NextRequest,
@@ -48,5 +49,6 @@ export async function POST(
     return NextResponse.json({ error: updateError.message }, { status: 500 })
   }
 
+  revalidateTag("academic-years")
   return NextResponse.json({ ok: true })
 }

@@ -1,7 +1,8 @@
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
+import { cache } from "react"
 
-export async function getSupabaseServerClient() {
+export const getSupabaseServerClient = cache(async function getSupabaseServerClient() {
   const cookieStore = await cookies()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return createServerClient<any>(
@@ -24,4 +25,4 @@ export async function getSupabaseServerClient() {
       },
     }
   )
-}
+})

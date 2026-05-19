@@ -1,4 +1,3 @@
-import { getSupabaseServerClient } from "@/lib/supabase/server"
 import { getAdminYearContext } from "@/lib/admin-year"
 import { PageHeader } from "@/components/shared/page-header"
 import { EmptyState } from "@/components/shared/empty-state"
@@ -11,6 +10,8 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Users, GraduationCap, BookOpen, Calendar } from "lucide-react"
 import type { AcademicYearStatus } from "@/types"
+import { unstable_cache } from "next/cache"
+import { createClient } from "@supabase/supabase-js"
 
 const STATUS_BADGE: Record<AcademicYearStatus, "default" | "secondary" | "outline"> = {
   active: "default",
@@ -19,22 +20,29 @@ const STATUS_BADGE: Record<AcademicYearStatus, "default" | "secondary" | "outlin
   ended: "outline",
 }
 
-async function getStats(yearId: string) {
-  const supabase = await getSupabaseServerClient()
-  const [
-    { count: students },
-    { count: professors },
-    { count: courses },
-  ] = await Promise.all([
-    supabase.from("students").select("*", { count: "exact", head: true }),
-    supabase.from("professors").select("*", { count: "exact", head: true }),
-    supabase
-      .from("courses")
-      .select("*", { count: "exact", head: true })
-      .eq("academic_year_id", yearId),
-  ])
-  return { students, professors, courses }
-}
+const getStats = unstable_cache(
+  async (yearId: string) => {
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_SECRET_SUPABASE_ANON_KEY!
+    )
+    const [
+      { count: students },
+      { count: professors },
+      { count: courses },
+    ] = await Promise.all([
+      supabase.from("students").select("*", { count: "exact", head: true }),
+      supabase.from("professors").select("*", { count: "exact", head: true }),
+      supabase
+        .from("courses")
+        .select("*", { count: "exact", head: true })
+        .eq("academic_year_id", yearId),
+    ])
+    return { students: students ?? 0, professors: professors ?? 0, courses: courses ?? 0 }
+  },
+  ["admin-stats"],
+  { tags: ["stats"] }
+)
 
 export default async function AdminDashboard() {
   const { year } = await getAdminYearContext()
@@ -57,9 +65,9 @@ export default async function AdminDashboard() {
   const { students, professors, courses } = await getStats(year.id)
 
   const stats = [
-    { label: "Total Students", value: students ?? 0, icon: Users },
-    { label: "Total Professors", value: professors ?? 0, icon: GraduationCap },
-    { label: "Courses This Year", value: courses ?? 0, icon: BookOpen },
+    { label: "Total Students", value: students, icon: Users },
+    { label: "Total Professors", value: professors, icon: GraduationCap },
+    { label: "Courses This Year", value: courses, icon: BookOpen },
   ]
 
   return (

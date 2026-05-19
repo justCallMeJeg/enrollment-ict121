@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getSupabaseServerClient } from "@/lib/supabase/server"
 import { hashPassword } from "@/lib/auth/password"
+import { revalidateTag } from "next/cache"
 
 export async function DELETE(
   request: NextRequest,
@@ -31,6 +32,8 @@ export async function DELETE(
 
   const { error } = await supabase.from("users").delete().eq("id", id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  revalidateTag("users")
+  revalidateTag("stats")
   return NextResponse.json({ ok: true })
 }
 
@@ -78,5 +81,7 @@ export async function PATCH(
     if (studentError) return NextResponse.json({ error: studentError.message }, { status: 500 })
   }
 
+  revalidateTag("users")
+  revalidateTag("stats")
   return NextResponse.json({ ok: true })
 }

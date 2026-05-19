@@ -60,42 +60,44 @@ export default async function PreEnrollmentPage() {
 
   const preEnrolledIds = new Set((preEnrolled ?? []).map((p) => p.course_id))
 
-  // Check prerequisites cross-year by course_code, not by UUID.
-  // A student may have passed the prerequisite in a previous year (different course UUID,
-  // same course_code), so we look up by code across all their enrollments.
-  const coursesWithEligibility: CourseWithEligibility[] = await Promise.all(
-    (courses ?? []).map(async (course) => {
-      const prereq = (course as { prerequisite?: { course_code: string } | null }).prerequisite
-      let eligible = true
+  // Collect all prerequisite course codes needed — one query covers all of them
+  const prereqCodes = (courses ?? [])
+    .map((c) => (c as { prerequisite?: { course_code: string } | null }).prerequisite?.course_code)
+    .filter(Boolean) as string[]
 
-      if (prereq?.course_code) {
-        const { data: passingEnrollment } = await supabase
-          .from("enrollments")
-          .select("id, grades(grade), courses!inner(course_code)")
-          .eq("student_id", userId)
-          .eq("status", "enrolled")
-          .eq("courses.course_code", prereq.course_code)
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle()
+  // Single query instead of N: fetch all the student's enrollments and resolve in-memory.
+  // Ordered newest-first so the first seen entry per course_code is the most recent attempt.
+  const passedCodes = new Set<string>()
+  if (prereqCodes.length > 0) {
+    const { data: allEnrollments } = await supabase
+      .from("enrollments")
+      .select("grades(grade), courses!inner(course_code)")
+      .eq("student_id", userId)
+      .eq("status", "enrolled")
+      .order("created_at", { ascending: false })
 
-        const grade = passingEnrollment?.grades
-          ? Array.isArray(passingEnrollment.grades)
-            ? passingEnrollment.grades[0]?.grade
-            : (passingEnrollment.grades as { grade: number | null })?.grade
-          : null
+    const seen = new Set<string>()
+    for (const e of allEnrollments ?? []) {
+      const course = Array.isArray(e.courses) ? e.courses[0] : e.courses
+      const code = course?.course_code
+      if (!code || !prereqCodes.includes(code) || seen.has(code)) continue
+      seen.add(code)
+      const gradeData = Array.isArray(e.grades) ? e.grades[0] : e.grades
+      const grade = (gradeData as { grade: number | null } | null)?.grade
+      if (grade !== null && grade !== undefined && grade <= 3.0) passedCodes.add(code)
+    }
+  }
 
-        eligible = grade !== null && grade !== undefined && grade <= 3.0
-      }
-
-      return {
-        ...course,
-        semester: course.semester as "1st" | "2nd" | "summer",
-        eligible,
-        pre_enrolled: preEnrolledIds.has(course.id),
-      }
-    })
-  )
+  const coursesWithEligibility: CourseWithEligibility[] = (courses ?? []).map((course) => {
+    const prereq = (course as { prerequisite?: { course_code: string } | null }).prerequisite
+    const eligible = !prereq?.course_code || passedCodes.has(prereq.course_code)
+    return {
+      ...course,
+      semester: course.semester as "1st" | "2nd" | "summer",
+      eligible,
+      pre_enrolled: preEnrolledIds.has(course.id),
+    }
+  })
 
   return (
     <div>
