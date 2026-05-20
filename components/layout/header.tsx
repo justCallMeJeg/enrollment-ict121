@@ -9,7 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { LogOut } from "lucide-react"
+import { GraduationCap, LogOut } from "lucide-react"
 import type { SessionPayload } from "@/types"
 
 function getInitials(name: string) {
@@ -23,10 +23,10 @@ function getInitials(name: string) {
 
 export function Header({
   user,
-  yearSwitcher,
+  breadcrumb,
 }: {
   user: SessionPayload
-  yearSwitcher?: React.ReactNode
+  breadcrumb?: React.ReactNode
 }) {
   const router = useRouter()
 
@@ -37,13 +37,14 @@ export function Header({
   }
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 h-14 border-b bg-background flex items-center px-4 gap-4">
-      <div className="flex items-center gap-2 w-[240px] shrink-0">
-        <span className="font-heading font-semibold text-sm leading-none">
-          {process.env.NEXT_PUBLIC_APP_NAME ?? "Enrollment System"}
-        </span>
-      </div>
-      {yearSwitcher && <div className="flex items-center">{yearSwitcher}</div>}
+    <header className="fixed top-0 left-0 right-0 z-50 h-14 border-b bg-background flex items-center px-4 gap-2">
+      <GraduationCap className="size-5 text-primary shrink-0" />
+      {breadcrumb && (
+        <>
+          <span className="text-muted-foreground/40 text-sm select-none">/</span>
+          {breadcrumb}
+        </>
+      )}
       <div className="flex-1" />
       <DropdownMenu>
         <DropdownMenuTrigger asChild>

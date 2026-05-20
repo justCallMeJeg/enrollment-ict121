@@ -10,7 +10,6 @@ import {
   Users,
   BookOpen,
   GraduationCap,
-  Calendar,
   ClipboardList,
   Star,
   School,
@@ -18,7 +17,10 @@ import {
   BookMarked,
   PanelLeft,
   Check,
+  Layers,
 } from "lucide-react"
+import { semesterLabel } from "@/types"
+import type { SemesterTerm } from "@/types"
 import { useSidebar } from "./sidebar-context"
 import {
   DropdownMenu,
@@ -45,7 +47,6 @@ const NAV_ITEMS: Record<UserRole, NavItem[]> = {
     { label: "Departments", href: "/admin/academic/departments", icon: School },
     { label: "Programs", href: "/admin/academic/programs", icon: GraduationCap },
     { label: "Courses", href: "/admin/courses", icon: BookOpen },
-    { label: "Academic Years", href: "/admin/academic-years", icon: Calendar },
   ],
   professor: [
     { label: "Dashboard", href: "/professor", icon: LayoutDashboard },
@@ -68,7 +69,18 @@ const DISPLAY_OPTIONS: { label: string; value: DisplayMode }[] = [
   { label: "Collapse", value: "collapsed" },
 ]
 
-export function Sidebar({ role }: { role: UserRole }) {
+const SEMESTER_SCOPED_ITEMS = [
+  { label: "Classrooms", href: "/admin/classrooms", icon: Layers },
+  { label: "Grade Management", href: "/admin/grades", icon: Star },
+]
+
+export function Sidebar({
+  role,
+  semesterContext,
+}: {
+  role: UserRole
+  semesterContext?: { id: string; term: SemesterTerm; ayLabel: string }
+}) {
   const pathname = usePathname()
   const { mode, setMode } = useSidebar()
   const [hovered, setHovered] = useState(false)
@@ -186,6 +198,59 @@ export function Sidebar({ role }: { role: UserRole }) {
 
           return linkContent
         })}
+
+        {/* Semester-scoped section (admin only) */}
+        {role === "admin" && semesterContext && (
+          <>
+            <div
+              className={cn(
+                "px-3 py-1.5 mt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60 whitespace-nowrap overflow-hidden transition-[max-width,opacity] duration-200",
+                expanded ? "max-w-[200px] opacity-100" : "max-w-0 opacity-0"
+              )}
+            >
+              {semesterLabel(semesterContext.term)}
+            </div>
+            {SEMESTER_SCOPED_ITEMS.map((item) => {
+              const Icon = item.icon
+              const isActive = pathname.startsWith(item.href)
+              const linkContent = (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors min-w-0",
+                    isActive
+                      ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                      : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                  )}
+                >
+                  <Icon className="size-4 shrink-0" />
+                  <span
+                    className={cn(
+                      "whitespace-nowrap overflow-hidden transition-[max-width,opacity] duration-200 ease-in-out",
+                      expanded ? "max-w-[200px] opacity-100" : "max-w-0 opacity-0"
+                    )}
+                  >
+                    {item.label}
+                  </span>
+                </Link>
+              )
+
+              if (!expanded) {
+                return (
+                  <Tooltip key={item.href} delayDuration={0}>
+                    <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
+                    <TooltipContent side="right" sideOffset={8}>
+                      {item.label}
+                    </TooltipContent>
+                  </Tooltip>
+                )
+              }
+
+              return linkContent
+            })}
+          </>
+        )}
       </nav>
 
       <div className="shrink-0 p-2 border-t">

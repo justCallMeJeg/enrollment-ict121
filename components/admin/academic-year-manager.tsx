@@ -2,24 +2,17 @@
 
 import { useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { ConfirmModal } from "@/components/shared/confirm-modal"
 import { FormModal } from "@/components/shared/form-modal"
 import { FilterDropdown } from "@/components/shared/filter-dropdown"
 import { SortMenu } from "@/components/shared/sort-menu"
 import type { AcademicYear } from "@/types"
-import { BookOpen, Pencil, Plus, Search, Trash2, X, Zap } from "lucide-react"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { ChevronRight, Pencil, Plus, Search, Trash2, X } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 
@@ -42,55 +35,23 @@ const SORT_OPTIONS = [
   { label: "Creation date", value: "created_at" },
 ]
 
-const SEMESTER_OPTIONS = [
-  { value: "1st", label: "1st Semester" },
-  { value: "2nd", label: "2nd Semester" },
-  { value: "Summer", label: "Summer" },
-]
-
-function deriveLabel(startYear: string, semester: string): string {
-  const sy = parseInt(startYear)
-  if (!sy) return ""
-  const range = `${sy}-${sy + 1}`
-  return semester === "Summer" ? `${range} Summer` : `${range} ${semester} Semester`
-}
-
-function parseLabel(label: string): { startYear: string; semester: string } {
-  const match = label.match(/^(\d{4})-\d{4}\s+(.+)$/)
-  if (!match) return { startYear: String(new Date().getFullYear()), semester: "1st" }
-  const sy = match[1]
-  const rest = match[2].trim()
-  const semester = rest.startsWith("1st")
-    ? "1st"
-    : rest.startsWith("2nd")
-    ? "2nd"
-    : "Summer"
-  return { startYear: sy, semester }
-}
-
-export function AcademicYearManager({ years }: { years: AcademicYear[] }) {
+export function AcademicYearManager({
+  years,
+  semesterCounts = {},
+}: {
+  years: AcademicYear[]
+  semesterCounts?: Record<string, number>
+}) {
   const router = useRouter()
-  const [startYear, setStartYear] = useState(String(new Date().getFullYear()))
-  const [semester, setSemester] = useState("1st")
-  const [creating, setCreating] = useState(false)
-  const [modalOpen, setModalOpen] = useState(false)
-  const [editTarget, setEditTarget] = useState<string | null>(null)
-  const [activateTarget, setActivateTarget] = useState<AcademicYear | null>(null)
-  const [activating, setActivating] = useState(false)
-  const [openTarget, setOpenTarget] = useState<AcademicYear | null>(null)
-  const [opening, setOpening] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [editTarget, setEditTarget] = useState<AcademicYear | null>(null)
+  const [editLabel, setEditLabel] = useState("")
   const [deleteTarget, setDeleteTarget] = useState<AcademicYear | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [search, setSearch] = useState("")
   const [filterStatus, setFilterStatus] = useState<string[]>([])
   const [sortBy, setSortBy] = useState("created_at")
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc")
-
-  const draft = years.find((y) => y.status === "draft")
-  const upcoming = years.find((y) => y.status === "upcoming")
-  const blocked = draft ?? upcoming
-
-  const derivedLabel = deriveLabel(startYear, semester)
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -102,105 +63,45 @@ export function AcademicYearManager({ years }: { years: AcademicYear[] }) {
     })
 
     result = [...result].sort((a, b) => {
-      let cmp = 0
-      if (sortBy === "label") {
-        cmp = a.label.localeCompare(b.label)
-      } else {
-        cmp = a.created_at.localeCompare(b.created_at)
-      }
+      const cmp =
+        sortBy === "label"
+          ? a.label.localeCompare(b.label)
+          : a.created_at.localeCompare(b.created_at)
       return sortDir === "asc" ? cmp : -cmp
     })
 
     return result
   }, [years, search, filterStatus, sortBy, sortDir])
 
-  function openCreate() {
-    setStartYear(String(new Date().getFullYear()))
-    setSemester("1st")
-    setEditTarget(null)
-    setModalOpen(true)
-  }
-
   function openEdit(year: AcademicYear) {
-    const parsed = parseLabel(year.label)
-    setStartYear(parsed.startYear)
-    setSemester(parsed.semester)
-    setEditTarget(year.id)
-    setModalOpen(true)
+    setEditLabel(year.label)
+    setEditTarget(year)
   }
 
-  function closeModal() {
-    setModalOpen(false)
+  function closeEdit() {
     setEditTarget(null)
-    setStartYear(String(new Date().getFullYear()))
-    setSemester("1st")
+    setEditLabel("")
   }
 
-  async function handleSubmit(e: { preventDefault(): void }) {
+  async function handleEditSubmit(e: { preventDefault(): void }) {
     e.preventDefault()
-    if (!derivedLabel) return
-    setCreating(true)
+    if (!editTarget || !editLabel.trim()) return
+    setSaving(true)
     try {
-      const url = editTarget
-        ? `/api/admin/academic-years/${editTarget}`
-        : "/api/admin/academic-years"
-      const method = editTarget ? "PATCH" : "POST"
-      const res = await fetch(url, {
-        method,
+      const res = await fetch(`/api/admin/academic-years/${editTarget.id}`, {
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ label: derivedLabel }),
+        body: JSON.stringify({ label: editLabel.trim() }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
-      toast.success(editTarget ? "Academic year updated" : "Academic year created")
-      closeModal()
+      toast.success("Academic year updated")
+      closeEdit()
       router.refresh()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to save")
+      toast.error(err instanceof Error ? err.message : "Failed to update")
     } finally {
-      setCreating(false)
-    }
-  }
-
-  async function handleOpen() {
-    if (!openTarget) return
-    setOpening(true)
-    try {
-      const res = await fetch(
-        `/api/admin/academic-years/${openTarget.id}/open`,
-        { method: "POST" }
-      )
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error)
-      toast.success("Pre-enrollment opened")
-      setOpenTarget(null)
-      router.refresh()
-    } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Failed to open pre-enrollment"
-      )
-    } finally {
-      setOpening(false)
-    }
-  }
-
-  async function handleActivate() {
-    if (!activateTarget) return
-    setActivating(true)
-    try {
-      const res = await fetch(
-        `/api/admin/academic-years/${activateTarget.id}/activate`,
-        { method: "POST" }
-      )
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error)
-      toast.success("Academic year activated")
-      setActivateTarget(null)
-      router.refresh()
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to activate")
-    } finally {
-      setActivating(false)
+      setSaving(false)
     }
   }
 
@@ -208,7 +109,9 @@ export function AcademicYearManager({ years }: { years: AcademicYear[] }) {
     if (!deleteTarget) return
     setDeleting(true)
     try {
-      const res = await fetch(`/api/admin/academic-years/${deleteTarget.id}`, { method: "DELETE" })
+      const res = await fetch(`/api/admin/academic-years/${deleteTarget.id}`, {
+        method: "DELETE",
+      })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       toast.success("Academic year deleted")
@@ -271,30 +174,12 @@ export function AcademicYearManager({ years }: { years: AcademicYear[] }) {
 
         <div className="flex-1" />
 
-        <Tooltip>
-          <TooltipTrigger asChild>
-            {blocked ? (
-              <span className="inline-flex" tabIndex={0}>
-                <Button size="sm" disabled>
-                  <Plus className="size-4 mr-2" />
-                  Add Academic Year
-                </Button>
-              </span>
-            ) : (
-              <Button size="sm" onClick={openCreate}>
-                <Plus className="size-4 mr-2" />
-                Add Academic Year
-              </Button>
-            )}
-          </TooltipTrigger>
-          <TooltipContent sideOffset={4}>
-            {blocked
-              ? draft
-                ? "A draft year already exists — open it for pre-enrollment first"
-                : "Activate the upcoming year before creating another"
-              : "Create a new draft academic year"}
-          </TooltipContent>
-        </Tooltip>
+        <Button size="sm" asChild>
+          <Link href="/admin/academic-years/new">
+            <Plus className="size-4 mr-2" />
+            Add Academic Year
+          </Link>
+        </Button>
       </div>
 
       {hasFilters && (
@@ -308,9 +193,7 @@ export function AcademicYearManager({ years }: { years: AcademicYear[] }) {
       {filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <p className="text-sm font-medium text-foreground">
-            {hasFilters
-              ? "No academic years match your filters"
-              : "No academic years"}
+            {hasFilters ? "No academic years match your filters" : "No academic years"}
           </p>
           <p className="text-xs text-muted-foreground mt-1">
             {hasFilters
@@ -324,92 +207,42 @@ export function AcademicYearManager({ years }: { years: AcademicYear[] }) {
             <YearCard
               key={year.id}
               year={year}
+              semesterCount={semesterCounts[year.id] ?? 0}
               onEdit={openEdit}
-              onOpen={setOpenTarget}
-              onActivate={setActivateTarget}
               onDelete={setDeleteTarget}
             />
           ))}
         </div>
       )}
 
+      {/* Edit label modal */}
       <FormModal
-        open={modalOpen}
-        onOpenChange={(o) => {
-          if (!o) closeModal()
-          else setModalOpen(true)
-        }}
-        title={editTarget ? "Edit Academic Year" : "Add Academic Year"}
-        onSubmit={handleSubmit}
-        submitLabel={editTarget ? "Save Changes" : "Create Academic Year"}
-        loading={creating}
+        open={!!editTarget}
+        onOpenChange={(o) => { if (!o) closeEdit() }}
+        title="Edit Academic Year"
+        onSubmit={handleEditSubmit}
+        submitLabel="Save Changes"
+        loading={saving}
       >
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="ay-year">Start Year <span className="text-destructive">*</span></Label>
-            <Input
-              id="ay-year"
-              type="number"
-              min={2000}
-              max={2100}
-              step={1}
-              value={startYear}
-              onChange={(e) => setStartYear(e.target.value)}
-              placeholder="e.g. 2025"
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Semester <span className="text-destructive">*</span></Label>
-            <Select value={semester} onValueChange={setSemester}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent position="popper">
-                {SEMESTER_OPTIONS.map((s) => (
-                  <SelectItem key={s.value} value={s.value}>
-                    {s.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        <div className="space-y-2">
+          <Label htmlFor="ay-label">
+            Label <span className="text-destructive">*</span>
+          </Label>
+          <Input
+            id="ay-label"
+            value={editLabel}
+            onChange={(e) => setEditLabel(e.target.value)}
+            placeholder="e.g. 2024-2025"
+            required
+          />
         </div>
-        {derivedLabel && (
-          <p className="text-xs text-muted-foreground">
-            Label:{" "}
-            <span className="font-medium text-foreground">{derivedLabel}</span>
-          </p>
-        )}
       </FormModal>
-
-      <ConfirmModal
-        open={!!openTarget}
-        onOpenChange={(open) => !open && setOpenTarget(null)}
-        title="Open Pre-Enrollment"
-        description={`Opening "${openTarget?.label}" for pre-enrollment will allow students to select courses. You can activate the year once pre-enrollment is complete.`}
-        confirmLabel="Open Pre-Enrollment"
-        variant="default"
-        onConfirm={handleOpen}
-        loading={opening}
-      />
-
-      <ConfirmModal
-        open={!!activateTarget}
-        onOpenChange={(open) => !open && setActivateTarget(null)}
-        title="Activate Academic Year"
-        description={`Activating "${activateTarget?.label}" will end the current active year, convert all pending pre-enrollments to enrollments, and advance all students to the next year level. This cannot be undone.`}
-        confirmLabel="Activate"
-        variant="default"
-        onConfirm={handleActivate}
-        loading={activating}
-      />
 
       <ConfirmModal
         open={!!deleteTarget}
         onOpenChange={(open) => !open && setDeleteTarget(null)}
         title="Delete Academic Year"
-        description={`Are you sure you want to delete "${deleteTarget?.label}"? All courses created under this year will also be deleted.`}
+        description={`Are you sure you want to delete "${deleteTarget?.label}"? All courses and semesters under this year will also be deleted.`}
         confirmLabel="Delete"
         onConfirm={handleDelete}
         loading={deleting}
@@ -420,95 +253,71 @@ export function AcademicYearManager({ years }: { years: AcademicYear[] }) {
 
 function YearCard({
   year,
+  semesterCount,
   onEdit,
-  onOpen,
-  onActivate,
   onDelete,
 }: {
   year: AcademicYear
+  semesterCount: number
   onEdit: (year: AcademicYear) => void
-  onOpen: (year: AcademicYear) => void
-  onActivate: (year: AcademicYear) => void
   onDelete: (year: AcademicYear) => void
 }) {
   return (
     <div
       className={cn(
-        "rounded-lg border bg-card p-5 flex flex-col gap-4 transition-shadow hover:shadow-md",
+        "rounded-lg border bg-card flex flex-col transition-shadow hover:shadow-md group",
         year.status === "active" && "border-primary/40"
       )}
     >
-      <div className="flex items-start justify-between gap-2">
-        <h3 className="font-semibold text-sm leading-snug">{year.label}</h3>
-        <Badge
-          variant={STATUS_BADGE[year.status] ?? "outline"}
-          className="capitalize shrink-0 text-[11px]"
-        >
-          {year.status}
-        </Badge>
-      </div>
+      {/* Clickable card body → AY detail page */}
+      <Link
+        href={`/admin/academic-years/${year.id}`}
+        className="p-5 flex-1 flex flex-col gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-t-lg"
+      >
+        <div className="flex items-start justify-between gap-2">
+          <h3 className="font-semibold text-sm leading-snug group-hover:text-primary transition-colors">
+            {year.label}
+          </h3>
+          <Badge
+            variant={STATUS_BADGE[year.status] ?? "outline"}
+            className="capitalize shrink-0 text-[11px]"
+          >
+            {year.status}
+          </Badge>
+        </div>
+        <div className="flex items-center justify-between">
+          {semesterCount > 0 ? (
+            <span className="text-xs text-muted-foreground">
+              {semesterCount} semester{semesterCount !== 1 ? "s" : ""}
+            </span>
+          ) : (
+            <span className="text-xs text-muted-foreground">No semesters</span>
+          )}
+          <ChevronRight className="size-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
+        </div>
+      </Link>
 
-      <div className="flex items-center gap-2 mt-auto pt-1 border-t">
+      {/* Action bar below card body */}
+      <div className="flex items-center gap-1 px-4 pb-3 pt-2 border-t">
         <Button
           size="sm"
           variant="ghost"
           className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
-          onClick={() => onEdit(year)}
+          onClick={(e) => { e.preventDefault(); onEdit(year) }}
         >
           <Pencil className="size-3 mr-1" />
           Edit
         </Button>
 
-        {year.status === "draft" && (
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive"
-            onClick={() => onDelete(year)}
-          >
-            <Trash2 className="size-3 mr-1" />
-            Delete
-          </Button>
-        )}
-
-        {year.status === "draft" && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-7 px-2 text-xs ml-auto"
-                onClick={() => onOpen(year)}
-              >
-                <BookOpen className="size-3 mr-1" />
-                Open Pre-Enrollment
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent sideOffset={4}>
-              Allow students to pre-enroll for this academic year
-            </TooltipContent>
-          </Tooltip>
-        )}
-
-        {year.status === "upcoming" && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-7 px-2 text-xs ml-auto"
-                onClick={() => onActivate(year)}
-              >
-                <Zap className="size-3 mr-1" />
-                Activate
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent sideOffset={4}>
-              End the current active year and convert pre-enrollments to
-              enrollments
-            </TooltipContent>
-          </Tooltip>
-        )}
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive"
+          onClick={(e) => { e.preventDefault(); onDelete(year) }}
+        >
+          <Trash2 className="size-3 mr-1" />
+          Delete
+        </Button>
       </div>
     </div>
   )

@@ -1,5 +1,29 @@
 export type UserRole = "admin" | "professor" | "student"
 
+export type SemesterTerm = "1st" | "2nd" | "midyear"
+
+export type SemesterStatus = "draft" | "pre_enrollment" | "active" | "ended"
+
+export type Semester = {
+  id: string
+  academic_year_id: string
+  term: SemesterTerm
+  status: SemesterStatus
+  created_at: string
+}
+
+export type AdminSemesterContext = {
+  id: string
+  academic_year_id: string
+  term: SemesterTerm
+  status: SemesterStatus
+}
+
+export function semesterLabel(term: SemesterTerm): string {
+  if (term === "midyear") return "Midyear Semester"
+  return `${term} Semester`
+}
+
 export type SessionPayload = {
   userId: string
   role: UserRole
@@ -61,7 +85,7 @@ export type Course = {
   professor_id: string | null
   course_code: string
   name: string
-  semester: "1st" | "2nd" | "summer"
+  semester: SemesterTerm
   units: number
   year_level: number
   prerequisite_course_id: string | null

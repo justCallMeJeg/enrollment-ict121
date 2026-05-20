@@ -2,6 +2,8 @@
 import { getSupabaseServerClient } from "@/lib/supabase/server"
 import { revalidateTag } from "next/cache"
 
+const SEMESTER_TERMS = ["1st", "2nd", "midyear"] as const
+
 export async function GET() {
   const supabase = await getSupabaseServerClient()
   const { data, error } = await supabase
@@ -120,6 +122,16 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  // Auto-create 3 semesters for the new academic year
+  await supabase.from("semesters").insert(
+    SEMESTER_TERMS.map((term) => ({
+      academic_year_id: newYear.id,
+      term,
+      status: "draft",
+    }))
+  )
+
   revalidateTag("academic-years", "max")
+  revalidateTag("semesters", "max")
   return NextResponse.json(newYear, { status: 201 })
 }

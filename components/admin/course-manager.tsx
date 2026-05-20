@@ -21,7 +21,7 @@ import { Badge } from "@/components/ui/badge"
 import { Pencil, Plus, Trash2 } from "lucide-react"
 import { IconButton } from "@/components/shared/icon-button"
 import { toast } from "sonner"
-import type { Program } from "@/types"
+import type { Program, SemesterTerm } from "@/types"
 
 type ProfessorOption = {
   user_id: string
@@ -44,7 +44,7 @@ type CourseRow = {
   prerequisite: { course_code: string; name: string } | null
 }
 
-const SEMESTERS = ["1st", "2nd", "summer"]
+const SEMESTERS = ["1st", "2nd", "midyear"]
 
 const INIT_FORM = {
   program_id: "",
@@ -62,11 +62,13 @@ export function CourseManager({
   programs,
   professors,
   academicYearId,
+  defaultTermFilter,
 }: {
   courses: CourseRow[]
   programs: Pick<Program, "id" | "name" | "code">[]
   professors: ProfessorOption[]
   academicYearId: string
+  defaultTermFilter?: SemesterTerm
 }) {
   const router = useRouter()
   const [form, setForm] = useState(INIT_FORM)
@@ -76,7 +78,9 @@ export function CourseManager({
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [search, setSearch] = useState("")
-  const [filterSemester, setFilterSemester] = useState<string[]>([])
+  const [filterSemester, setFilterSemester] = useState<string[]>(
+    defaultTermFilter ? [defaultTermFilter] : []
+  )
   const [filterYear, setFilterYear] = useState<string[]>([])
   const [filterProgram, setFilterProgram] = useState<string[]>([])
 
@@ -205,7 +209,7 @@ export function CourseManager({
             key: "semester",
             label: "Semester",
             options: SEMESTERS.map((s) => ({
-              label: s === "summer" ? "Summer" : `${s} Semester`,
+              label: s === "midyear" ? "Midyear Semester" : `${s} Semester`,
               value: s,
             })),
             selected: filterSemester,
@@ -360,7 +364,7 @@ export function CourseManager({
               <SelectContent position="popper">
                 {SEMESTERS.map((s) => (
                   <SelectItem key={s} value={s}>
-                    {s === "summer" ? "Summer" : `${s} Semester`}
+                    {s === "midyear" ? "Midyear Semester" : `${s} Semester`}
                   </SelectItem>
                 ))}
               </SelectContent>

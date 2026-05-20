@@ -5,7 +5,7 @@ import { EmptyState } from "@/components/shared/empty-state"
 import { CourseManager } from "@/components/admin/course-manager"
 
 export default async function CoursesPage() {
-  const { year } = await getAdminYearContext()
+  const { year, semester } = await getAdminYearContext()
 
   if (!year) {
     return (
@@ -47,6 +47,7 @@ export default async function CoursesPage() {
         programs={programs ?? []}
         professors={professors ?? []}
         academicYearId={year.id}
+        defaultTermFilter={semester?.term}
       />
     </div>
   )
