@@ -19,7 +19,6 @@ import {
   Check,
   Layers,
 } from "lucide-react"
-import { semesterLabel } from "@/types"
 import type { SemesterTerm } from "@/types"
 import { useSidebar } from "./sidebar-context"
 import {
@@ -32,6 +31,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { Button } from "@/components/ui/button"
+import { Separator } from "@/components/ui/separator"
 
 type NavItem = {
   label: string
@@ -39,14 +39,30 @@ type NavItem = {
   icon: React.ElementType
 }
 
-const NAV_ITEMS: Record<UserRole, NavItem[]> = {
+type NavGroup = {
+  groupLabel: string
+  items: NavItem[]
+}
+
+type NavSection = NavItem | NavGroup
+
+function isGroup(s: NavSection): s is NavGroup {
+  return "items" in s
+}
+
+const NAV_ITEMS: Record<UserRole, NavSection[]> = {
   admin: [
     { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
     { label: "User Accounts", href: "/admin/users", icon: Users },
-    { label: "Colleges", href: "/admin/academic/colleges", icon: Building2 },
-    { label: "Departments", href: "/admin/academic/departments", icon: School },
-    { label: "Programs", href: "/admin/academic/programs", icon: GraduationCap },
-    { label: "Courses", href: "/admin/courses", icon: BookOpen },
+    {
+      groupLabel: "Academics",
+      items: [
+        { label: "Colleges", href: "/admin/academic/colleges", icon: Building2 },
+        { label: "Departments", href: "/admin/academic/departments", icon: School },
+        { label: "Programs", href: "/admin/academic/programs", icon: GraduationCap },
+        { label: "Courses", href: "/admin/courses", icon: BookOpen },
+      ],
+    },
   ],
   professor: [
     { label: "Dashboard", href: "/professor", icon: LayoutDashboard },
@@ -145,6 +161,50 @@ export function Sidebar({
 
   const items = NAV_ITEMS[role]
 
+  function renderNavItem(item: NavItem) {
+    const Icon = item.icon
+    const isActive =
+      item.href === `/${role}`
+        ? pathname === item.href
+        : pathname.startsWith(item.href)
+
+    const linkContent = (
+      <Link
+        key={item.href}
+        href={item.href}
+        className={cn(
+          "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors min-w-0",
+          isActive
+            ? "bg-sidebar-primary text-sidebar-primary-foreground"
+            : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+        )}
+      >
+        <Icon className="size-4 shrink-0" />
+        <span
+          className={cn(
+            "whitespace-nowrap overflow-hidden transition-[max-width,opacity] duration-200 ease-in-out",
+            expanded ? "max-w-[200px] opacity-100" : "max-w-0 opacity-0"
+          )}
+        >
+          {item.label}
+        </span>
+      </Link>
+    )
+
+    if (!expanded) {
+      return (
+        <Tooltip key={item.href} delayDuration={0}>
+          <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
+          <TooltipContent side="right" sideOffset={8}>
+            {item.label}
+          </TooltipContent>
+        </Tooltip>
+      )
+    }
+
+    return linkContent
+  }
+
   return (
     <aside
       className={cn(
@@ -155,61 +215,22 @@ export function Sidebar({
       onMouseLeave={handleMouseLeave}
     >
       <nav className="flex flex-col gap-1 p-2 pt-3 flex-1 overflow-y-auto overflow-x-hidden">
-        {items.map((item) => {
-          const Icon = item.icon
-          const isActive =
-            item.href === `/${role}`
-              ? pathname === item.href
-              : pathname.startsWith(item.href)
-
-          const linkContent = (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors min-w-0",
-                isActive
-                  ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-              )}
-            >
-              <Icon className="size-4 shrink-0" />
-              <span
-                className={cn(
-                  "whitespace-nowrap overflow-hidden transition-[max-width,opacity] duration-200 ease-in-out",
-                  expanded ? "max-w-[200px] opacity-100" : "max-w-0 opacity-0"
-                )}
-              >
-                {item.label}
-              </span>
-            </Link>
-          )
-
-          if (!expanded) {
+        {items.map((section) => {
+          if (isGroup(section)) {
             return (
-              <Tooltip key={item.href} delayDuration={0}>
-                <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
-                <TooltipContent side="right" sideOffset={8}>
-                  {item.label}
-                </TooltipContent>
-              </Tooltip>
+              <div key={section.groupLabel}>
+                <Separator className="my-1" />
+                {section.items.map((item) => renderNavItem(item))}
+              </div>
             )
           }
-
-          return linkContent
+          return renderNavItem(section)
         })}
 
         {/* Semester-scoped section (admin only) */}
         {role === "admin" && semesterContext && (
           <>
-            <div
-              className={cn(
-                "px-3 py-1.5 mt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60 whitespace-nowrap overflow-hidden transition-[max-width,opacity] duration-200",
-                expanded ? "max-w-[200px] opacity-100" : "max-w-0 opacity-0"
-              )}
-            >
-              {semesterLabel(semesterContext.term)}
-            </div>
+            <Separator className="my-1" />
             {SEMESTER_SCOPED_ITEMS.map((item) => {
               const Icon = item.icon
               const isActive = pathname.startsWith(item.href)

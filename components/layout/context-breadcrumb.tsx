@@ -13,7 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Check, ChevronRight, ChevronsUpDown, Plus, Search } from "lucide-react"
+import { Check, ChevronsUpDown, Plus, Search } from "lucide-react"
 import { semesterLabel } from "@/types"
 import type { AdminYearContext, AdminSemesterContext, AcademicYearStatus, SemesterStatus } from "@/types"
 
@@ -200,7 +200,6 @@ export function ContextBreadcrumb({
 
   function selectYear(id: string) {
     document.cookie = `admin-year-id=${id}; path=/; max-age=2592000; SameSite=Lax`
-    // Clear semester cookie when switching year
     document.cookie = `admin-semester-id=; path=/; max-age=0; SameSite=Lax`
     router.refresh()
   }
@@ -219,7 +218,7 @@ export function ContextBreadcrumb({
       />
       {semesters.length > 0 && (
         <>
-          <ChevronRight className="size-3.5 text-muted-foreground/60 shrink-0" />
+          <span className="text-muted-foreground/60 text-sm select-none">/</span>
           <SemesterCombobox
             semesters={semesters}
             currentSemesterId={currentSemesterId}
