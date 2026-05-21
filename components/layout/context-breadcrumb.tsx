@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
@@ -17,6 +16,7 @@ import { Check, ChevronsUpDown, Plus, Search } from "lucide-react"
 import { semesterLabel } from "@/types"
 import type { AdminYearContext, AdminSemesterContext, AcademicYearStatus, SemesterStatus } from "@/types"
 import { Button } from "@/components/ui/button"
+import { useAdminYearContext } from "@/components/layout/admin-year-context"
 
 const YEAR_STATUS_BADGE: Record<AcademicYearStatus, "default" | "secondary" | "outline"> = {
   active: "default",
@@ -222,28 +222,25 @@ function SemesterCombobox({
   )
 }
 
-export function ContextBreadcrumb({
-  years,
-  semesters,
-  currentYearId,
-  currentSemesterId,
-}: {
-  years: AdminYearContext[]
-  semesters: AdminSemesterContext[]
-  currentYearId: string | null
-  currentSemesterId: string | null
-}) {
-  const router = useRouter()
+export function ContextBreadcrumb() {
+  const {
+    years,
+    semesters,
+    currentYearId,
+    currentSemesterId,
+    selectYear,
+    selectSemester,
+  } = useAdminYearContext()
 
-  function selectYear(id: string) {
-    document.cookie = `admin-year-id=${id}; path=/; max-age=2592000; SameSite=Lax`
-    document.cookie = `admin-semester-id=; path=/; max-age=0; SameSite=Lax`
-    router.refresh()
-  }
-
-  function selectSemester(id: string) {
-    document.cookie = `admin-semester-id=${id}; path=/; max-age=2592000; SameSite=Lax`
-    router.refresh()
+  if (years.length === 0) {
+    return (
+      <Link
+        href="/admin/academic-years"
+        className="text-sm font-medium hover:text-primary transition-colors"
+      >
+        Academic Years
+      </Link>
+    )
   }
 
   return (

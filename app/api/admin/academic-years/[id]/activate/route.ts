@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server"
+﻿import { NextRequest, NextResponse } from "next/server"
 import { getSupabaseServerClient } from "@/lib/supabase/server"
 import { revalidateTag } from "next/cache"
 
@@ -71,9 +71,9 @@ export async function POST(
   // Increment all students' year_level by 1 (capped at 6)
   await supabase.rpc("increment_student_year_levels")
 
-  revalidateTag("academic-years", "max")
-  revalidateTag("courses", "max")
-  revalidateTag("users", "max")
-  revalidateTag("stats", "max")
+  revalidateTag("academic-years")
+  revalidateTag("courses")
+  revalidateTag("users")
+  revalidateTag("stats")
   return NextResponse.json({ ok: true })
 }

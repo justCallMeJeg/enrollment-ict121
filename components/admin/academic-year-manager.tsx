@@ -1,8 +1,8 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { mutate } from "swr"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -42,7 +42,6 @@ export function AcademicYearManager({
   years: AcademicYear[]
   semesterCounts?: Record<string, number>
 }) {
-  const router = useRouter()
   const [saving, setSaving] = useState(false)
   const [editTarget, setEditTarget] = useState<AcademicYear | null>(null)
   const [editLabel, setEditLabel] = useState("")
@@ -97,7 +96,7 @@ export function AcademicYearManager({
       if (!res.ok) throw new Error(data.error)
       toast.success("Academic year updated")
       closeEdit()
-      router.refresh()
+      await mutate("/api/admin/academic-years")
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to update")
     } finally {
@@ -114,9 +113,10 @@ export function AcademicYearManager({
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
+
+      await mutate("/api/admin/academic-years")
       toast.success("Academic year deleted")
       setDeleteTarget(null)
-      router.refresh()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to delete")
     } finally {
@@ -271,7 +271,7 @@ function YearCard({
     >
       {/* Clickable card body → AY detail page */}
       <Link
-        href={`/admin/academic-years/${year.id}`}
+        href={`/admin/${year.id}`}
         className="p-5 flex-1 flex flex-col gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-t-lg"
       >
         <div className="flex items-start justify-between gap-2">

@@ -36,13 +36,8 @@ export function AcademicYearCreateForm() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
 
-      // Set the new year as active context
-      document.cookie = `admin-year-id=${data.id}; path=/; max-age=2592000; SameSite=Lax`
-      document.cookie = `admin-semester-id=; path=/; max-age=0; SameSite=Lax`
-
       toast.success(`Academic year ${derivedLabel} created with 3 semesters`)
-      router.push("/admin")
-      router.refresh()
+      router.push(`/admin/${data.id}`)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to create academic year")
     } finally {

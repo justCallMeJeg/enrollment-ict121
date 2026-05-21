@@ -3,6 +3,36 @@ import { getSupabaseServerClient } from "@/lib/supabase/server"
 import { hashPassword } from "@/lib/auth/password"
 import { revalidateTag } from "next/cache"
 
+export async function GET() {
+  const supabase = await getSupabaseServerClient()
+
+  const [{ data: professors }, { data: students }, { data: programs }] =
+    await Promise.all([
+      supabase
+        .from("professors")
+        .select("user_id, faculty_id, users(id, name, email, role, contact_number, created_at)")
+        .order("faculty_id"),
+      supabase
+        .from("students")
+        .select("user_id, year_level, program_id, section, users(id, name, email, role, contact_number, created_at)")
+        .order("user_id"),
+      supabase.from("programs").select("id, name, code").order("name"),
+    ])
+
+  const users = [
+    ...(professors ?? []).map((p) => {
+      const u = Array.isArray(p.users) ? p.users[0] : p.users
+      return { id: u.id, name: u.name, email: u.email, role: u.role, created_at: u.created_at, contact_number: u.contact_number ?? null }
+    }),
+    ...(students ?? []).map((s) => {
+      const u = Array.isArray(s.users) ? s.users[0] : s.users
+      return { id: u.id, name: u.name, email: u.email, role: u.role, created_at: u.created_at, contact_number: u.contact_number ?? null, year_level: s.year_level, program_id: s.program_id, section: s.section }
+    }),
+  ].sort((a, b) => a.name.localeCompare(b.name))
+
+  return NextResponse.json({ users, programs: programs ?? [] })
+}
+
 export async function POST(request: NextRequest) {
   const body = await request.json()
   const {
@@ -64,7 +94,7 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  revalidateTag("users", "max")
-  revalidateTag("stats", "max")
+  revalidateTag("users")
+  revalidateTag("stats")
   return NextResponse.json({ id: user.id }, { status: 201 })
 }

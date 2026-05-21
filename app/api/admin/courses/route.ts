@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
   const supabase = await getSupabaseServerClient()
   let query = supabase
     .from("courses")
-    .select("*, programs(name, code), professors(faculty_id, users(name))")
+    .select("*, programs(name, code), professors(faculty_id, users(name)), prerequisite:prerequisite_course_id(course_code, name)")
     .order("course_code")
 
   if (academicYearId) {
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
     }
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
-  revalidateTag("courses", "max")
-  revalidateTag("stats", "max")
+  revalidateTag("courses")
+  revalidateTag("stats")
   return NextResponse.json(data, { status: 201 })
 }

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { mutate } from "swr"
 import Link from "next/link"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -71,7 +71,6 @@ export function SemesterListView({
   academicYear: { id: string; label: string }
   semesters: Semester[]
 }) {
-  const router = useRouter()
   const [pendingAction, setPendingAction] = useState<Action | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -113,7 +112,7 @@ export function SemesterListView({
         )
       }
       setPendingAction(null)
-      router.refresh()
+      await mutate(`/api/admin/semesters?yearId=${academicYear.id}`)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Action failed")
     } finally {
@@ -183,7 +182,7 @@ function SemesterCard({
     >
       {/* Clickable body → semester detail */}
       <Link
-        href={`/admin/academic-years/${academicYearId}/${sem.id}`}
+        href={`/admin/${academicYearId}/${sem.id}`}
         className="p-5 flex-1 flex flex-col gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-t-lg"
       >
         <div className="flex items-start justify-between gap-2">

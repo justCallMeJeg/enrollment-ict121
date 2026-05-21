@@ -22,6 +22,6 @@ export async function POST(request: NextRequest) {
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  revalidateTag("programs", "max")
+  revalidateTag("programs")
   return NextResponse.json(data, { status: 201 })
 }

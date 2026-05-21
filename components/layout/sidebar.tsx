@@ -19,8 +19,8 @@ import {
   Check,
   Layers,
 } from "lucide-react"
-import type { SemesterTerm } from "@/types"
 import { useSidebar } from "./sidebar-context"
+import { useAdminYearContext } from "./admin-year-context"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -60,7 +60,6 @@ const NAV_ITEMS: Record<UserRole, NavSection[]> = {
         { label: "Colleges", href: "/admin/academic/colleges", icon: Building2 },
         { label: "Departments", href: "/admin/academic/departments", icon: School },
         { label: "Programs", href: "/admin/academic/programs", icon: GraduationCap },
-        { label: "Courses", href: "/admin/courses", icon: BookOpen },
       ],
     },
   ],
@@ -85,18 +84,17 @@ const DISPLAY_OPTIONS: { label: string; value: DisplayMode }[] = [
   { label: "Collapse", value: "collapsed" },
 ]
 
-const SEMESTER_SCOPED_ITEMS = [
-  { label: "Classrooms", href: "/admin/classrooms", icon: Layers },
-  { label: "Grade Management", href: "/admin/grades", icon: Star },
+const YEAR_SCOPED_ITEMS = [
+  { label: "Courses", icon: BookOpen },
 ]
 
-export function Sidebar({
-  role,
-  semesterContext,
-}: {
-  role: UserRole
-  semesterContext?: { id: string; term: SemesterTerm; ayLabel: string }
-}) {
+const SEMESTER_SCOPED_ITEMS = [
+  { label: "Classrooms", icon: Layers },
+  { label: "Grade Management", icon: Star },
+]
+
+export function Sidebar({ role }: { role: UserRole }) {
+  const { years, semesters, currentYearId, currentSemesterId } = useAdminYearContext()
   const pathname = usePathname()
   const { mode, setMode } = useSidebar()
   const [hovered, setHovered] = useState(false)
@@ -108,6 +106,9 @@ export function Sidebar({
   const isOverSidebar = useRef(false)
 
   const expanded = mode === "expanded" || (mode === "hover" && (hovered || dropdownOpen))
+
+  const currentYear = years.find((y) => y.id === currentYearId)
+  const currentSem = semesters.find((s) => s.id === currentSemesterId)
 
   // When mode changes away from "hover", stop any pending timer and clear hovered.
   useEffect(() => {
@@ -158,6 +159,8 @@ export function Sidebar({
       }, 150)
     }
   }
+
+  if (years.length === 0) return null
 
   const items = NAV_ITEMS[role]
 
@@ -227,17 +230,18 @@ export function Sidebar({
           return renderNavItem(section)
         })}
 
-        {/* Semester-scoped section (admin only) */}
-        {role === "admin" && semesterContext && (
+        {/* Year-scoped section (admin only, when yearId is in URL) */}
+        {role === "admin" && currentYearId && (
           <>
             <Separator className="my-1" />
-            {SEMESTER_SCOPED_ITEMS.map((item) => {
+            {YEAR_SCOPED_ITEMS.map((item) => {
+              const href = `/admin/${currentYearId}/courses`
               const Icon = item.icon
-              const isActive = pathname.startsWith(item.href)
+              const isActive = pathname.startsWith(href)
               const linkContent = (
                 <Link
-                  key={item.href}
-                  href={item.href}
+                  key={href}
+                  href={href}
                   className={cn(
                     "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors min-w-0",
                     isActive
@@ -246,28 +250,59 @@ export function Sidebar({
                   )}
                 >
                   <Icon className="size-4 shrink-0" />
-                  <span
-                    className={cn(
-                      "whitespace-nowrap overflow-hidden transition-[max-width,opacity] duration-200 ease-in-out",
-                      expanded ? "max-w-[200px] opacity-100" : "max-w-0 opacity-0"
-                    )}
-                  >
+                  <span className={cn("whitespace-nowrap overflow-hidden transition-[max-width,opacity] duration-200 ease-in-out", expanded ? "max-w-[200px] opacity-100" : "max-w-0 opacity-0")}>
                     {item.label}
                   </span>
                 </Link>
               )
-
               if (!expanded) {
                 return (
-                  <Tooltip key={item.href} delayDuration={0}>
+                  <Tooltip key={href} delayDuration={0}>
                     <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
-                    <TooltipContent side="right" sideOffset={8}>
-                      {item.label}
-                    </TooltipContent>
+                    <TooltipContent side="right" sideOffset={8}>{item.label}</TooltipContent>
                   </Tooltip>
                 )
               }
+              return linkContent
+            })}
+          </>
+        )}
 
+        {/* Semester-scoped section (admin only, when both yearId + semId in URL) */}
+        {role === "admin" && currentYearId && currentSemesterId && (
+          <>
+            <Separator className="my-1" />
+            {SEMESTER_SCOPED_ITEMS.map((item) => {
+              const href = item.label === "Classrooms"
+                ? `/admin/${currentYearId}/${currentSemesterId}/classrooms`
+                : `/admin/${currentYearId}/${currentSemesterId}/grades`
+              const Icon = item.icon
+              const isActive = pathname.startsWith(href)
+              const linkContent = (
+                <Link
+                  key={href}
+                  href={href}
+                  className={cn(
+                    "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors min-w-0",
+                    isActive
+                      ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                      : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                  )}
+                >
+                  <Icon className="size-4 shrink-0" />
+                  <span className={cn("whitespace-nowrap overflow-hidden transition-[max-width,opacity] duration-200 ease-in-out", expanded ? "max-w-[200px] opacity-100" : "max-w-0 opacity-0")}>
+                    {item.label}
+                  </span>
+                </Link>
+              )
+              if (!expanded) {
+                return (
+                  <Tooltip key={href} delayDuration={0}>
+                    <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
+                    <TooltipContent side="right" sideOffset={8}>{item.label}</TooltipContent>
+                  </Tooltip>
+                )
+              }
               return linkContent
             })}
           </>

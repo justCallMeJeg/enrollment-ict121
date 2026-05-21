@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
     }))
   )
 
-  revalidateTag("academic-years", "max")
-  revalidateTag("semesters", "max")
+  revalidateTag("academic-years")
+  revalidateTag("semesters")
   return NextResponse.json(newYear, { status: 201 })
 }

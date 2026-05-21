@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import { useRouter } from "next/navigation"
+import { mutate } from "swr"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -70,7 +70,6 @@ export function CourseManager({
   academicYearId: string
   defaultTermFilter?: SemesterTerm
 }) {
-  const router = useRouter()
   const [form, setForm] = useState(INIT_FORM)
   const [loading, setLoading] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
@@ -155,7 +154,7 @@ export function CourseManager({
       if (!res.ok) throw new Error(data.error)
       toast.success(editTarget ? "Course updated" : "Course created")
       closeModal()
-      router.refresh()
+      await mutate(`/api/admin/courses?academic_year_id=${academicYearId}`)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to save course")
     } finally {
@@ -174,7 +173,7 @@ export function CourseManager({
       }
       toast.success("Course deleted")
       setDeleteTarget(null)
-      router.refresh()
+      await mutate(`/api/admin/courses?academic_year_id=${academicYearId}`)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to delete")
     } finally {

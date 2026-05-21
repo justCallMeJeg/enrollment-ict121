@@ -1,6 +1,5 @@
 import { headers } from "next/headers"
 import { AdminShell } from "@/components/layout/admin-shell"
-import { getAdminYearContext } from "@/lib/admin-year"
 import type { SessionPayload, UserRole } from "@/types"
 
 export default async function AdminMainLayout({
@@ -15,17 +14,5 @@ export default async function AdminMainLayout({
     name: headersList.get("x-user-name")!,
   }
 
-  const { year, years, semester, semesters } = await getAdminYearContext()
-
-  return (
-    <AdminShell
-      user={user}
-      years={years}
-      semesters={semesters}
-      currentYearId={year?.id ?? null}
-      currentSemesterId={semester?.id ?? null}
-    >
-      {children}
-    </AdminShell>
-  )
+  return <AdminShell user={user}>{children}</AdminShell>
 }

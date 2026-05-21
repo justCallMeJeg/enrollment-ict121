@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server"
+﻿import { NextRequest, NextResponse } from "next/server"
 import { getSupabaseServerClient } from "@/lib/supabase/server"
 import { revalidateTag } from "next/cache"
 import type { SemesterStatus } from "@/types"
@@ -48,7 +48,7 @@ export async function PATCH(
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  revalidateTag("semesters", "max")
+  revalidateTag("semesters")
   return NextResponse.json(data)
 }
 
@@ -82,6 +82,6 @@ export async function DELETE(
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  revalidateTag("semesters", "max")
+  revalidateTag("semesters")
   return NextResponse.json({ success: true })
 }
