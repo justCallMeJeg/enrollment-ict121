@@ -24,12 +24,16 @@ export default async function StudentGradesPage() {
 
   const supabase = await getSupabaseServerClient()
 
-  // Fetch all enrollments across all years, grouped by academic year
   const { data: enrollments } = await supabase
     .from("enrollments")
-    .select(
-      "id, status, academic_year_id, academic_years(id, label), courses(course_code, name, units, semester), grades(grade, remarks)"
-    )
+    .select(`
+      id, status,
+      classrooms!inner(
+        courses(course_code, name, units, semester),
+        semesters!inner(academic_year_id, academic_years(id, label))
+      ),
+      grades(grade, remarks)
+    `)
     .eq("student_id", userId)
     .order("created_at", { ascending: false })
 
@@ -45,23 +49,59 @@ export default async function StudentGradesPage() {
     )
   }
 
-  // Group by academic_year_id, preserving order (most recent first)
-  const yearMap = new Map<string, { label: string; rows: typeof enrollments }>()
-  for (const e of enrollments) {
-    const yearData = Array.isArray(e.academic_years) ? e.academic_years[0] : e.academic_years
-    const yearId = yearData?.id ?? e.academic_year_id
-    const yearLabel = yearData?.label ?? "Unknown Year"
-    if (!yearMap.has(yearId)) {
-      yearMap.set(yearId, { label: yearLabel, rows: [] })
+  // Normalize and group by academic year
+  type NormalizedRow = {
+    id: string
+    course_code: string
+    course_name: string
+    semester: string
+    units: number
+    grade: number | null
+    remarks: string | null
+    yearId: string
+    yearLabel: string
+  }
+
+  const rows: NormalizedRow[] = enrollments.map((e) => {
+    const classroom = Array.isArray(e.classrooms) ? e.classrooms[0] : e.classrooms
+    const course = classroom?.courses
+      ? Array.isArray(classroom.courses) ? classroom.courses[0] : classroom.courses
+      : null
+    const sem = classroom?.semesters
+      ? Array.isArray(classroom.semesters) ? classroom.semesters[0] : classroom.semesters
+      : null
+    const yearData = sem?.academic_years
+      ? Array.isArray(sem.academic_years) ? sem.academic_years[0] : sem.academic_years
+      : null
+    const gradeData = Array.isArray(e.grades) ? e.grades[0] : e.grades
+
+    return {
+      id: e.id,
+      course_code: (course as { course_code: string } | null)?.course_code ?? "—",
+      course_name: (course as { name: string } | null)?.name ?? "—",
+      semester: (course as { semester: string } | null)?.semester ?? "—",
+      units: (course as { units: number } | null)?.units ?? 0,
+      grade: gradeData?.grade ?? null,
+      remarks: gradeData?.remarks ?? null,
+      yearId: (yearData as { id: string } | null)?.id ?? sem?.academic_year_id ?? "unknown",
+      yearLabel: (yearData as { label: string } | null)?.label ?? "Unknown Year",
     }
-    yearMap.get(yearId)!.rows.push(e)
+  })
+
+  // Group by year, preserving order
+  const yearMap = new Map<string, { label: string; rows: NormalizedRow[] }>()
+  for (const row of rows) {
+    if (!yearMap.has(row.yearId)) {
+      yearMap.set(row.yearId, { label: row.yearLabel, rows: [] })
+    }
+    yearMap.get(row.yearId)!.rows.push(row)
   }
 
   return (
     <div>
       <PageHeader title="My Grades" description="Your academic history across all years" />
       <div className="space-y-8">
-        {Array.from(yearMap.entries()).map(([yearId, { label, rows }]) => (
+        {Array.from(yearMap.entries()).map(([yearId, { label, rows: yearRows }]) => (
           <section key={yearId}>
             <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
               {label}
@@ -79,42 +119,34 @@ export default async function StudentGradesPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {rows.map((e) => {
-                    const course = Array.isArray(e.courses) ? e.courses[0] : e.courses
-                    const gradeData = Array.isArray(e.grades) ? e.grades[0] : e.grades
-                    const grade = gradeData?.grade ?? null
-                    const remarks = gradeData?.remarks ?? null
-                    return (
-                      <TableRow key={e.id}>
-                        <TableCell className="font-mono text-sm">
-                          {course?.course_code}
-                        </TableCell>
-                        <TableCell>{course?.name}</TableCell>
-                        <TableCell>{course?.semester}</TableCell>
-                        <TableCell>{course?.units}</TableCell>
-                        <TableCell className={gradeColor(grade)}>
-                          {grade !== null ? grade.toFixed(2) : "—"}
-                        </TableCell>
-                        <TableCell>
-                          {remarks ? (
-                            <Badge
-                              variant={
-                                remarks === "Passed"
-                                  ? "default"
-                                  : remarks === "Failed" || remarks === "Dropped"
-                                  ? "destructive"
-                                  : "secondary"
-                              }
-                            >
-                              {remarks}
-                            </Badge>
-                          ) : (
-                            <span className="text-muted-foreground text-sm">Pending</span>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })}
+                  {yearRows.map((row) => (
+                    <TableRow key={row.id}>
+                      <TableCell className="font-mono text-sm">{row.course_code}</TableCell>
+                      <TableCell>{row.course_name}</TableCell>
+                      <TableCell>{row.semester}</TableCell>
+                      <TableCell>{row.units}</TableCell>
+                      <TableCell className={gradeColor(row.grade)}>
+                        {row.grade !== null ? row.grade.toFixed(2) : "—"}
+                      </TableCell>
+                      <TableCell>
+                        {row.remarks ? (
+                          <Badge
+                            variant={
+                              row.remarks === "Passed"
+                                ? "default"
+                                : row.remarks === "Failed" || row.remarks === "Dropped"
+                                ? "destructive"
+                                : "secondary"
+                            }
+                          >
+                            {row.remarks}
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">Pending</span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
                 </TableBody>
               </Table>
             </div>

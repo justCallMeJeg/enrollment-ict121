@@ -1,41 +1,23 @@
-﻿import { NextRequest, NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { getSupabaseServerClient } from "@/lib/supabase/server"
 import { revalidateTag } from "next/cache"
 
-export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url)
-  const academicYearId = searchParams.get("academic_year_id")
-
+export async function GET() {
   const supabase = await getSupabaseServerClient()
-  let query = supabase
+  const { data, error } = await supabase
     .from("courses")
-    .select("*, programs(name, code), professors(faculty_id, users(name)), prerequisite:prerequisite_course_id(course_code, name)")
+    .select("*, programs(name, code), prerequisite:prerequisite_course_id(course_code, name)")
     .order("course_code")
 
-  if (academicYearId) {
-    query = query.eq("academic_year_id", academicYearId)
-  }
-
-  const { data, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json(data)
 }
 
 export async function POST(request: NextRequest) {
   const body = await request.json()
-  const {
-    academic_year_id,
-    program_id,
-    professor_id,
-    course_code,
-    name,
-    semester,
-    units,
-    year_level,
-    prerequisite_course_id,
-  } = body
+  const { program_id, course_code, name, semester, units, year_level, prerequisite_course_id } = body
 
-  if (!academic_year_id || !course_code || !name || !semester) {
+  if (!course_code || !name || !semester) {
     return NextResponse.json({ error: "Required fields missing" }, { status: 400 })
   }
 
@@ -43,9 +25,7 @@ export async function POST(request: NextRequest) {
   const { data, error } = await supabase
     .from("courses")
     .insert({
-      academic_year_id,
       program_id: program_id ?? null,
-      professor_id: professor_id ?? null,
       course_code,
       name,
       semester,
@@ -57,16 +37,14 @@ export async function POST(request: NextRequest) {
     .single()
 
   if (error) {
-    // Unique violation: course_code already exists for this year
     if (error.code === "23505") {
       return NextResponse.json(
-        { error: "A course with this code already exists for the selected academic year" },
+        { error: "A course with this code already exists" },
         { status: 409 }
       )
     }
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
   revalidateTag("courses")
-  revalidateTag("stats")
   return NextResponse.json(data, { status: 201 })
 }

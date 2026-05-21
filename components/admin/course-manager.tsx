@@ -21,13 +21,7 @@ import { Badge } from "@/components/ui/badge"
 import { Pencil, Plus, Trash2 } from "lucide-react"
 import { IconButton } from "@/components/shared/icon-button"
 import { toast } from "sonner"
-import type { Program, SemesterTerm } from "@/types"
-
-type ProfessorOption = {
-  user_id: string
-  faculty_id: string
-  users: { name: string }[] | { name: string } | null
-}
+import type { Program } from "@/types"
 
 type CourseRow = {
   id: string
@@ -37,10 +31,8 @@ type CourseRow = {
   units: number
   year_level: number
   program_id: string | null
-  professor_id: string | null
   prerequisite_course_id: string | null
   programs: { name: string; code: string } | null
-  professors: { faculty_id: string; users: { name: string } | null } | null
   prerequisite: { course_code: string; name: string } | null
 }
 
@@ -48,7 +40,6 @@ const SEMESTERS = ["1st", "2nd", "midyear"]
 
 const INIT_FORM = {
   program_id: "",
-  professor_id: "",
   course_code: "",
   name: "",
   semester: "1st",
@@ -60,15 +51,9 @@ const INIT_FORM = {
 export function CourseManager({
   courses,
   programs,
-  professors,
-  academicYearId,
-  defaultTermFilter,
 }: {
   courses: CourseRow[]
   programs: Pick<Program, "id" | "name" | "code">[]
-  professors: ProfessorOption[]
-  academicYearId: string
-  defaultTermFilter?: SemesterTerm
 }) {
   const [form, setForm] = useState(INIT_FORM)
   const [loading, setLoading] = useState(false)
@@ -77,9 +62,7 @@ export function CourseManager({
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [search, setSearch] = useState("")
-  const [filterSemester, setFilterSemester] = useState<string[]>(
-    defaultTermFilter ? [defaultTermFilter] : []
-  )
+  const [filterSemester, setFilterSemester] = useState<string[]>([])
   const [filterYear, setFilterYear] = useState<string[]>([])
   const [filterProgram, setFilterProgram] = useState<string[]>([])
 
@@ -112,7 +95,6 @@ export function CourseManager({
   function openEdit(row: CourseRow) {
     setForm({
       program_id: row.program_id ?? "",
-      professor_id: row.professor_id ?? "",
       course_code: row.course_code,
       name: row.name,
       semester: row.semester,
@@ -139,9 +121,7 @@ export function CourseManager({
         units: Number(form.units),
         year_level: Number(form.year_level),
         program_id: form.program_id || null,
-        professor_id: form.professor_id || null,
         prerequisite_course_id: form.prerequisite_course_id || null,
-        ...(!editTarget && { academic_year_id: academicYearId }),
       }
       const url = editTarget ? `/api/admin/courses/${editTarget}` : "/api/admin/courses"
       const method = editTarget ? "PATCH" : "POST"
@@ -154,7 +134,7 @@ export function CourseManager({
       if (!res.ok) throw new Error(data.error)
       toast.success(editTarget ? "Course updated" : "Course created")
       closeModal()
-      await mutate(`/api/admin/courses?academic_year_id=${academicYearId}`)
+      await mutate("/api/admin/courses")
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to save course")
     } finally {
@@ -173,7 +153,7 @@ export function CourseManager({
       }
       toast.success("Course deleted")
       setDeleteTarget(null)
-      await mutate(`/api/admin/courses?academic_year_id=${academicYearId}`)
+      await mutate("/api/admin/courses")
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to delete")
     } finally {
@@ -186,12 +166,6 @@ export function CourseManager({
     filterSemester.length > 0 ||
     filterYear.length > 0 ||
     filterProgram.length > 0
-
-  // Combobox options
-  const professorOptions = professors.map((p) => {
-    const pUser = Array.isArray(p.users) ? p.users[0] : p.users
-    return { value: p.user_id, label: pUser?.name ?? p.faculty_id, code: p.faculty_id }
-  })
 
   const prerequisiteOptions = courses
     .filter((c) => c.id !== editTarget)
@@ -247,7 +221,7 @@ export function CourseManager({
           { key: "name", header: "Course Name" },
           {
             key: "semester",
-            header: "Semester",
+            header: "Default Semester",
             render: (row) => {
               const c = row as unknown as CourseRow
               return <Badge variant="outline">{c.semester}</Badge>
@@ -256,13 +230,12 @@ export function CourseManager({
           { key: "year_level", header: "Year" },
           { key: "units", header: "Units" },
           {
-            key: "professor",
-            header: "Professor",
+            key: "program",
+            header: "Program",
             render: (row) => {
               const c = row as unknown as CourseRow
-              if (!c.professors) return <span className="text-muted-foreground">—</span>
-              const pUser = Array.isArray(c.professors.users) ? c.professors.users[0] : c.professors.users
-              return pUser?.name ?? c.professors.faculty_id
+              if (!c.programs) return <span className="text-muted-foreground">All programs</span>
+              return <span>{c.programs.code}</span>
             },
           },
           {
@@ -327,35 +300,21 @@ export function CourseManager({
             />
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label>Program <span className="text-xs text-muted-foreground font-normal">(optional — leave blank for all programs)</span></Label>
-            <Combobox
-              options={programs.map((p) => ({ value: p.id, label: p.name, code: p.code }))}
-              value={form.program_id}
-              onValueChange={(v) => set("program_id", v)}
-              placeholder="All programs"
-              searchPlaceholder="Search programs…"
-              emptyText="No programs found."
-              clearable
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Professor</Label>
-            <Combobox
-              options={professorOptions}
-              value={form.professor_id}
-              onValueChange={(v) => set("professor_id", v)}
-              placeholder="Select professor (optional)"
-              searchPlaceholder="Search professors…"
-              emptyText="No professors found."
-              clearable
-            />
-          </div>
+        <div className="space-y-2">
+          <Label>Program <span className="text-xs text-muted-foreground font-normal">(optional — leave blank for all programs)</span></Label>
+          <Combobox
+            options={programs.map((p) => ({ value: p.id, label: p.name, code: p.code }))}
+            value={form.program_id}
+            onValueChange={(v) => set("program_id", v)}
+            placeholder="All programs"
+            searchPlaceholder="Search programs…"
+            emptyText="No programs found."
+            clearable
+          />
         </div>
         <div className="grid grid-cols-3 gap-4">
           <div className="space-y-2">
-            <Label>Semester <span className="text-destructive">*</span></Label>
+            <Label>Default Semester <span className="text-destructive">*</span></Label>
             <Select value={form.semester} onValueChange={(v) => set("semester", v)}>
               <SelectTrigger>
                 <SelectValue />
@@ -413,7 +372,7 @@ export function CourseManager({
         open={!!deleteTarget}
         onOpenChange={(open) => !open && setDeleteTarget(null)}
         title="Delete Course"
-        description="Are you sure? This will also remove all enrollments and grades for this course."
+        description="Are you sure? This will also remove all classrooms, enrollments and grades for this course."
         confirmLabel="Delete"
         onConfirm={handleDelete}
         loading={deleting}

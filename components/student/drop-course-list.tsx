@@ -13,7 +13,6 @@ type CourseData = { course_code: string; name: string; semester: string; units: 
 
 type Enrollment = {
   id: string
-  course_id: string
   status: string
   courses: CourseData[] | CourseData | null
 }

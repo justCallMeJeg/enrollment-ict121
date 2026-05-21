@@ -21,6 +21,8 @@ import {
 } from "lucide-react"
 import { useSidebar } from "./sidebar-context"
 import { useAdminYearContext } from "./admin-year-context"
+import { semesterLabel } from "@/types"
+import type { SemesterTerm } from "@/types"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,7 +33,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
 
 type NavItem = {
   label: string
@@ -60,6 +61,7 @@ const NAV_ITEMS: Record<UserRole, NavSection[]> = {
         { label: "Colleges", href: "/admin/academic/colleges", icon: Building2 },
         { label: "Departments", href: "/admin/academic/departments", icon: School },
         { label: "Programs", href: "/admin/academic/programs", icon: GraduationCap },
+        { label: "Courses", href: "/admin/academic/courses", icon: BookOpen },
       ],
     },
   ],
@@ -92,6 +94,19 @@ const SEMESTER_SCOPED_ITEMS = [
   { label: "Classrooms", icon: Layers },
   { label: "Grade Management", icon: Star },
 ]
+
+function SidebarSectionLabel({ label, expanded }: { label: string; expanded: boolean }) {
+  return (
+    <span
+      className={cn(
+        "px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 whitespace-nowrap overflow-hidden transition-[max-width,opacity] duration-200 block",
+        expanded ? "max-w-[200px] opacity-100" : "max-w-0 opacity-0"
+      )}
+    >
+      {label}
+    </span>
+  )
+}
 
 export function Sidebar({ role }: { role: UserRole }) {
   const { years, semesters, currentYearId, currentSemesterId } = useAdminYearContext()
@@ -222,7 +237,7 @@ export function Sidebar({ role }: { role: UserRole }) {
           if (isGroup(section)) {
             return (
               <div key={section.groupLabel}>
-                <Separator className="my-1" />
+                <SidebarSectionLabel label={section.groupLabel} expanded={expanded} />
                 {section.items.map((item) => renderNavItem(item))}
               </div>
             )
@@ -233,7 +248,7 @@ export function Sidebar({ role }: { role: UserRole }) {
         {/* Year-scoped section (admin only, when yearId is in URL) */}
         {role === "admin" && currentYearId && (
           <>
-            <Separator className="my-1" />
+            <SidebarSectionLabel label={currentYear?.label ?? "Academic Year"} expanded={expanded} />
             {YEAR_SCOPED_ITEMS.map((item) => {
               const href = `/admin/${currentYearId}/courses`
               const Icon = item.icon
@@ -271,7 +286,10 @@ export function Sidebar({ role }: { role: UserRole }) {
         {/* Semester-scoped section (admin only, when both yearId + semId in URL) */}
         {role === "admin" && currentYearId && currentSemesterId && (
           <>
-            <Separator className="my-1" />
+            <SidebarSectionLabel
+              label={currentSem ? semesterLabel(currentSem.term as SemesterTerm) : "Semester"}
+              expanded={expanded}
+            />
             {SEMESTER_SCOPED_ITEMS.map((item) => {
               const href = item.label === "Classrooms"
                 ? `/admin/${currentYearId}/${currentSemesterId}/classrooms`

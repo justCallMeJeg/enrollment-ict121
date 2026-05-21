@@ -109,61 +109,72 @@ ALTER TABLE public.semesters DISABLE ROW LEVEL SECURITY;
 CREATE INDEX IF NOT EXISTS idx_semesters_academic_year_id ON public.semesters (academic_year_id);
 
 -- -----------------------------------------------------------------------------
--- courses
+-- courses  (global catalog — canonical course definitions, not year-specific)
 -- -----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.courses (
   id                     uuid    PRIMARY KEY DEFAULT gen_random_uuid(),
-  academic_year_id       uuid    NOT NULL REFERENCES public.academic_years(id) ON DELETE CASCADE,
-  program_id             uuid    REFERENCES public.programs(id),
-  professor_id           uuid    REFERENCES public.users(id),
-  course_code            text    NOT NULL,
+  program_id             uuid    REFERENCES public.programs(id) ON DELETE SET NULL,
+  course_code            text    NOT NULL UNIQUE,
   name                   text    NOT NULL,
   semester               text    NOT NULL CHECK (semester IN ('1st', '2nd', 'midyear')),
   units                  integer NOT NULL DEFAULT 3,
   year_level             integer NOT NULL DEFAULT 1,
-  prerequisite_course_id uuid    REFERENCES public.courses(id),
-  created_at             timestamptz NOT NULL DEFAULT now(),
-  UNIQUE (academic_year_id, course_code)
+  prerequisite_course_id uuid    REFERENCES public.courses(id) ON DELETE SET NULL,
+  created_at             timestamptz NOT NULL DEFAULT now()
 );
 ALTER TABLE public.courses DISABLE ROW LEVEL SECURITY;
-CREATE INDEX IF NOT EXISTS idx_courses_academic_year_id ON public.courses (academic_year_id);
-CREATE INDEX IF NOT EXISTS idx_courses_program_id       ON public.courses (program_id);
-CREATE INDEX IF NOT EXISTS idx_courses_professor_id     ON public.courses (professor_id);
+CREATE INDEX IF NOT EXISTS idx_courses_program_id ON public.courses (program_id);
 
 -- -----------------------------------------------------------------------------
--- pre_enrollments
+-- classrooms  (teaching instances: course + academic year + semester + professor + section)
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.classrooms (
+  id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  course_id        uuid NOT NULL REFERENCES public.courses(id)        ON DELETE CASCADE,
+  academic_year_id uuid NOT NULL REFERENCES public.academic_years(id) ON DELETE CASCADE,
+  semester_id      uuid NOT NULL REFERENCES public.semesters(id)      ON DELETE CASCADE,
+  professor_id     uuid REFERENCES public.professors(user_id)         ON DELETE SET NULL,
+  section          text NOT NULL,
+  created_at       timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (course_id, semester_id, section)
+);
+ALTER TABLE public.classrooms DISABLE ROW LEVEL SECURITY;
+CREATE INDEX IF NOT EXISTS idx_classrooms_course_id        ON public.classrooms (course_id);
+CREATE INDEX IF NOT EXISTS idx_classrooms_academic_year_id ON public.classrooms (academic_year_id);
+CREATE INDEX IF NOT EXISTS idx_classrooms_semester_id      ON public.classrooms (semester_id);
+CREATE INDEX IF NOT EXISTS idx_classrooms_professor_id     ON public.classrooms (professor_id);
+
+-- -----------------------------------------------------------------------------
+-- pre_enrollments  (student expresses interest in a classroom before activation)
 -- -----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.pre_enrollments (
-  id               uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
-  student_id       uuid        NOT NULL REFERENCES public.students(user_id) ON DELETE CASCADE,
-  course_id        uuid        NOT NULL REFERENCES public.courses(id)       ON DELETE CASCADE,
-  academic_year_id uuid        NOT NULL REFERENCES public.academic_years(id) ON DELETE CASCADE,
-  status           text        NOT NULL DEFAULT 'pending'
-                               CHECK (status IN ('pending', 'dropped')),
-  created_at       timestamptz NOT NULL DEFAULT now(),
-  UNIQUE (student_id, course_id, academic_year_id)
+  id           uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  student_id   uuid        NOT NULL REFERENCES public.students(user_id) ON DELETE CASCADE,
+  classroom_id uuid        NOT NULL REFERENCES public.classrooms(id)    ON DELETE CASCADE,
+  status       text        NOT NULL DEFAULT 'pending'
+                           CHECK (status IN ('pending', 'dropped')),
+  created_at   timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (student_id, classroom_id)
 );
 ALTER TABLE public.pre_enrollments DISABLE ROW LEVEL SECURITY;
-CREATE INDEX IF NOT EXISTS idx_pre_enrollments_student_id ON public.pre_enrollments (student_id);
-CREATE INDEX IF NOT EXISTS idx_pre_enrollments_course_id  ON public.pre_enrollments (course_id);
+CREATE INDEX IF NOT EXISTS idx_pre_enrollments_student_id   ON public.pre_enrollments (student_id);
+CREATE INDEX IF NOT EXISTS idx_pre_enrollments_classroom_id ON public.pre_enrollments (classroom_id);
 
 -- -----------------------------------------------------------------------------
--- enrollments
+-- enrollments  (confirmed: student enrolled in a specific classroom/section)
 -- -----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.enrollments (
-  id               uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
-  student_id       uuid        NOT NULL REFERENCES public.students(user_id) ON DELETE CASCADE,
-  course_id        uuid        NOT NULL REFERENCES public.courses(id)       ON DELETE CASCADE,
-  academic_year_id uuid        NOT NULL REFERENCES public.academic_years(id) ON DELETE CASCADE,
-  status           text        NOT NULL DEFAULT 'enrolled'
-                               CHECK (status IN ('enrolled', 'dropped')),
-  created_at       timestamptz NOT NULL DEFAULT now(),
-  UNIQUE (student_id, course_id, academic_year_id)
+  id           uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  student_id   uuid        NOT NULL REFERENCES public.students(user_id) ON DELETE CASCADE,
+  classroom_id uuid        NOT NULL REFERENCES public.classrooms(id)    ON DELETE CASCADE,
+  status       text        NOT NULL DEFAULT 'enrolled'
+                           CHECK (status IN ('enrolled', 'dropped')),
+  created_at   timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (student_id, classroom_id)
 );
 ALTER TABLE public.enrollments DISABLE ROW LEVEL SECURITY;
-CREATE INDEX IF NOT EXISTS idx_enrollments_student_id       ON public.enrollments (student_id);
-CREATE INDEX IF NOT EXISTS idx_enrollments_course_id        ON public.enrollments (course_id);
-CREATE INDEX IF NOT EXISTS idx_enrollments_academic_year_id ON public.enrollments (academic_year_id);
+CREATE INDEX IF NOT EXISTS idx_enrollments_student_id   ON public.enrollments (student_id);
+CREATE INDEX IF NOT EXISTS idx_enrollments_classroom_id ON public.enrollments (classroom_id);
 
 -- -----------------------------------------------------------------------------
 -- grades  (1-to-1 with enrollments; created automatically on enrollment)

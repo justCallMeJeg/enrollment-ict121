@@ -80,9 +80,7 @@ export type Program = {
 
 export type Course = {
   id: string
-  academic_year_id: string
-  program_id: string
-  professor_id: string | null
+  program_id: string | null
   course_code: string
   name: string
   semester: SemesterTerm
@@ -90,8 +88,19 @@ export type Course = {
   year_level: number
   prerequisite_course_id: string | null
   programs?: Program
-  professors?: Professor
   prerequisite?: Course | null
+}
+
+export type Classroom = {
+  id: string
+  course_id: string
+  academic_year_id: string
+  semester_id: string
+  professor_id: string | null
+  section: string
+  created_at: string
+  courses?: Course
+  professors?: Professor
 }
 
 export type AcademicYearStatus = "draft" | "upcoming" | "active" | "ended"
@@ -116,13 +125,11 @@ export type PreEnrollmentStatus = "pending" | "dropped"
 export type PreEnrollment = {
   id: string
   student_id: string
-  course_id: string
-  academic_year_id: string
+  classroom_id: string
   status: PreEnrollmentStatus
   created_at: string
-  courses?: Course
+  classrooms?: Classroom
   students?: Student
-  academic_years?: AcademicYear
 }
 
 export type EnrollmentStatus = "enrolled" | "dropped"
@@ -130,13 +137,11 @@ export type EnrollmentStatus = "enrolled" | "dropped"
 export type Enrollment = {
   id: string
   student_id: string
-  course_id: string
-  academic_year_id: string
+  classroom_id: string
   status: EnrollmentStatus
   created_at: string
-  courses?: Course
+  classrooms?: Classroom
   students?: Student
-  academic_years?: AcademicYear
   grades?: Grade | null
 }
 
@@ -148,6 +153,22 @@ export type Grade = {
   updated_at: string
 }
 
+export type ClassroomWithEligibility = {
+  id: string
+  section: string
+  course_id: string
+  course_code: string
+  course_name: string
+  semester: string
+  units: number
+  year_level: number
+  professor_name: string | null
+  prerequisite_code: string | null
+  eligible: boolean
+  pre_enrolled: boolean
+}
+
+// Kept for backwards compat with any other code that imports it
 export type CourseWithEligibility = Course & {
   eligible: boolean
   pre_enrolled: boolean

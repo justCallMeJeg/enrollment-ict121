@@ -30,10 +30,25 @@ export default async function DropCoursePage() {
 
   const { data: enrollments } = await supabase
     .from("enrollments")
-    .select("id, course_id, status, courses(course_code, name, semester, units)")
+    .select(`
+      id, status,
+      classrooms!inner(
+        courses(course_code, name, semester, units),
+        semesters!inner(academic_year_id)
+      )
+    `)
     .eq("student_id", userId)
-    .eq("academic_year_id", activeYear.id)
     .eq("status", "enrolled")
+    .eq("classrooms.semesters.academic_year_id", activeYear.id)
+
+  // Normalize: bring courses up to enrollment level for DropCourseList
+  const normalized = (enrollments ?? []).map((e) => {
+    const classroom = Array.isArray(e.classrooms) ? e.classrooms[0] : e.classrooms
+    const course = classroom?.courses
+      ? Array.isArray(classroom.courses) ? classroom.courses[0] : classroom.courses
+      : null
+    return { id: e.id, status: e.status, courses: course }
+  })
 
   return (
     <div>
@@ -41,7 +56,7 @@ export default async function DropCoursePage() {
         title="Drop Course"
         description={`Manage your enrollment for ${activeYear.label}`}
       />
-      <DropCourseList enrollments={enrollments ?? []} />
+      <DropCourseList enrollments={normalized} />
     </div>
   )
 }

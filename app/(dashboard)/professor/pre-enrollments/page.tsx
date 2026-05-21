@@ -42,16 +42,17 @@ export default async function ProfessorPreEnrollmentsPage() {
   const { data: preEnrollments } = await supabase
     .from("pre_enrollments")
     .select(
-      "id, status, created_at, courses(course_code, name), students(student_id, section, users(name))"
+      "id, status, created_at, classrooms!inner(professor_id, academic_year_id, courses(course_code, name)), students(student_id, section, users(name))"
     )
-    .eq("academic_year_id", upcomingYear.id)
     .eq("status", "pending")
-    .eq("courses.professor_id", userId)
+    .eq("classrooms.professor_id", userId)
+    .eq("classrooms.academic_year_id", upcomingYear.id)
     .order("created_at")
 
-  const filtered = (preEnrollments ?? []).filter(
-    (pe) => pe.courses !== null
-  )
+  const filtered = (preEnrollments ?? []).map((pe) => {
+    const classroom = Array.isArray(pe.classrooms) ? pe.classrooms[0] : pe.classrooms
+    return { ...pe, courses: classroom?.courses ?? null }
+  }).filter((pe) => pe.courses !== null)
 
   return (
     <div>

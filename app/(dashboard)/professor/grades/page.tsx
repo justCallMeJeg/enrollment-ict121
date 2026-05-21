@@ -50,14 +50,18 @@ export default async function ProfessorGradesPage({
   const { data: enrollments } = await supabase
     .from("enrollments")
     .select(
-      "id, status, courses(id, course_code, name, professor_id), students(student_id, section, users(name)), grades(id, grade, remarks)"
+      "id, status, classrooms!inner(professor_id, academic_year_id, courses(id, course_code, name)), students(student_id, section, users(name)), grades(id, grade, remarks)"
     )
-    .eq("academic_year_id", selectedYear.id)
     .eq("status", "enrolled")
-    .eq("courses.professor_id", userId)
+    .eq("classrooms.professor_id", userId)
+    .eq("classrooms.academic_year_id", selectedYear.id)
     .order("created_at")
 
-  const filtered = (enrollments ?? []).filter((e) => e.courses !== null)
+  // Normalize: move courses up to enrollment level for GradeTable compatibility
+  const normalized = (enrollments ?? []).map((e) => {
+    const classroom = Array.isArray(e.classrooms) ? e.classrooms[0] : e.classrooms
+    return { ...e, courses: classroom?.courses ?? null }
+  }).filter((e) => e.courses !== null)
 
   return (
     <div>
@@ -70,13 +74,13 @@ export default async function ProfessorGradesPage({
           <YearFilter years={years} selectedId={selectedYear.id} />
         </div>
       )}
-      {filtered.length === 0 ? (
+      {normalized.length === 0 ? (
         <EmptyState
           title="No enrolled students"
           description="Students enrolled in your courses will appear here."
         />
       ) : (
-        <GradeTable enrollments={filtered} />
+        <GradeTable enrollments={normalized} />
       )}
     </div>
   )

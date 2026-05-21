@@ -8,35 +8,33 @@ import { Button } from "@/components/ui/button"
 import { ConfirmModal } from "@/components/shared/confirm-modal"
 import { CheckCircle, XCircle, BookOpen } from "lucide-react"
 import { toast } from "sonner"
-import type { CourseWithEligibility } from "@/types"
+import type { ClassroomWithEligibility } from "@/types"
 
 type Props = {
-  courses: CourseWithEligibility[]
-  academicYearId: string
+  classrooms: ClassroomWithEligibility[]
 }
 
-export function PreEnrollmentList({ courses, academicYearId }: Props) {
+export function PreEnrollmentList({ classrooms }: Props) {
   const router = useRouter()
-  const [pendingToggle, setPendingToggle] = useState<CourseWithEligibility | null>(null)
+  const [pendingToggle, setPendingToggle] = useState<ClassroomWithEligibility | null>(null)
   const [loading, setLoading] = useState(false)
 
-  async function handleEnroll(course: CourseWithEligibility) {
-    if (!course.eligible) return
-    if (course.pre_enrolled) {
-      // confirm before unenrolling
-      setPendingToggle(course)
+  async function handleEnroll(classroom: ClassroomWithEligibility) {
+    if (!classroom.eligible) return
+    if (classroom.pre_enrolled) {
+      setPendingToggle(classroom)
       return
     }
-    await toggle(course, true)
+    await toggle(classroom, true)
   }
 
-  async function toggle(course: CourseWithEligibility, enroll: boolean) {
+  async function toggle(classroom: ClassroomWithEligibility, enroll: boolean) {
     setLoading(true)
     try {
       const res = await fetch("/api/student/pre-enrollment", {
         method: enroll ? "POST" : "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ course_id: course.id, academic_year_id: academicYearId }),
+        body: JSON.stringify({ classroom_id: classroom.id }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
@@ -50,13 +48,13 @@ export function PreEnrollmentList({ courses, academicYearId }: Props) {
     }
   }
 
-  if (courses.length === 0) {
+  if (classrooms.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
         <BookOpen className="size-10 text-muted-foreground mb-3" />
         <p className="font-medium text-sm">No courses available</p>
         <p className="text-xs text-muted-foreground mt-1">
-          No courses found for your year level and program.
+          No classrooms found for your year level and program.
         </p>
       </div>
     )
@@ -65,64 +63,65 @@ export function PreEnrollmentList({ courses, academicYearId }: Props) {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {courses.map((course) => {
-          const prereq = (course as unknown as { prerequisite?: { course_code: string } | null }).prerequisite
-          return (
-            <Card
-              key={course.id}
-              className={course.pre_enrolled ? "border-primary" : undefined}
-            >
-              <CardHeader className="pb-2">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <CardTitle className="text-sm font-semibold">
-                      {course.course_code}
-                    </CardTitle>
-                    <p className="text-sm text-muted-foreground mt-0.5">{course.name}</p>
-                  </div>
-                  {course.pre_enrolled && (
-                    <Badge variant="default" className="shrink-0">Enrolled</Badge>
-                  )}
+        {classrooms.map((classroom) => (
+          <Card
+            key={classroom.id}
+            className={classroom.pre_enrolled ? "border-primary" : undefined}
+          >
+            <CardHeader className="pb-2">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <CardTitle className="text-sm font-semibold">
+                    {classroom.course_code}
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground mt-0.5">{classroom.course_name}</p>
                 </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex gap-2 flex-wrap">
-                  <Badge variant="outline">{course.semester} Sem</Badge>
-                  <Badge variant="outline">{course.units} units</Badge>
-                </div>
-                {prereq && (
-                  <div className="flex items-center gap-1.5 text-xs">
-                    {course.eligible ? (
-                      <CheckCircle className="size-3.5 text-green-500" />
-                    ) : (
-                      <XCircle className="size-3.5 text-destructive" />
-                    )}
-                    <span className={course.eligible ? "text-muted-foreground" : "text-destructive"}>
-                      Prerequisite: {prereq.course_code}
-                      {!course.eligible && " (not yet passed)"}
-                    </span>
-                  </div>
+                {classroom.pre_enrolled && (
+                  <Badge variant="default" className="shrink-0">Enrolled</Badge>
                 )}
-                <Button
-                  size="sm"
-                  variant={course.pre_enrolled ? "outline" : "default"}
-                  className="w-full"
-                  disabled={!course.eligible || loading}
-                  onClick={() => handleEnroll(course)}
-                >
-                  {course.pre_enrolled ? "Remove" : "Add to Pre-Enrollment"}
-                </Button>
-              </CardContent>
-            </Card>
-          )
-        })}
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex gap-2 flex-wrap">
+                <Badge variant="outline">{classroom.semester} Sem</Badge>
+                <Badge variant="outline">{classroom.units} units</Badge>
+                <Badge variant="secondary">Section {classroom.section}</Badge>
+              </div>
+              {classroom.professor_name && (
+                <p className="text-xs text-muted-foreground">{classroom.professor_name}</p>
+              )}
+              {classroom.prerequisite_code && (
+                <div className="flex items-center gap-1.5 text-xs">
+                  {classroom.eligible ? (
+                    <CheckCircle className="size-3.5 text-green-500" />
+                  ) : (
+                    <XCircle className="size-3.5 text-destructive" />
+                  )}
+                  <span className={classroom.eligible ? "text-muted-foreground" : "text-destructive"}>
+                    Prerequisite: {classroom.prerequisite_code}
+                    {!classroom.eligible && " (not yet passed)"}
+                  </span>
+                </div>
+              )}
+              <Button
+                size="sm"
+                variant={classroom.pre_enrolled ? "outline" : "default"}
+                className="w-full"
+                disabled={!classroom.eligible || loading}
+                onClick={() => handleEnroll(classroom)}
+              >
+                {classroom.pre_enrolled ? "Remove" : "Add to Pre-Enrollment"}
+              </Button>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       <ConfirmModal
         open={!!pendingToggle}
         onOpenChange={(open) => !open && setPendingToggle(null)}
         title="Remove Course"
-        description={`Are you sure you want to remove "${pendingToggle?.name}" from your pre-enrollment? You can re-add it later if slots are available.`}
+        description={`Are you sure you want to remove "${pendingToggle?.course_name}" from your pre-enrollment? You can re-add it later if slots are available.`}
         confirmLabel="Remove"
         onConfirm={() => pendingToggle && toggle(pendingToggle, false)}
         loading={loading}

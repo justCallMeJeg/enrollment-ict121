@@ -15,10 +15,10 @@ export async function POST(request: NextRequest) {
 
   const supabase = await getSupabaseServerClient()
 
-  // Verify this enrollment belongs to the current student
+  // Verify this enrollment belongs to the current student and the year is active
   const { data: enrollment } = await supabase
     .from("enrollments")
-    .select("id, student_id, academic_year_id")
+    .select("id, student_id, classrooms(semesters(academic_years(status)))")
     .eq("id", enrollment_id)
     .single()
 
@@ -26,14 +26,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Not found" }, { status: 404 })
   }
 
-  // Verify year is still active
-  const { data: year } = await supabase
-    .from("academic_years")
-    .select("status")
-    .eq("id", enrollment.academic_year_id)
-    .single()
+  const classroom = enrollment.classrooms
+    ? Array.isArray(enrollment.classrooms) ? enrollment.classrooms[0] : enrollment.classrooms
+    : null
+  const sem = classroom?.semesters
+    ? Array.isArray(classroom.semesters) ? classroom.semesters[0] : classroom.semesters
+    : null
+  const yearData = sem?.academic_years
+    ? Array.isArray(sem.academic_years) ? sem.academic_years[0] : sem.academic_years
+    : null
 
-  if (!year || year.status !== "active") {
+  if (!(yearData as { status: string } | null)?.status || (yearData as { status: string }).status !== "active") {
     return NextResponse.json(
       { error: "Course dropping is only available during an active year" },
       { status: 400 }
@@ -47,7 +50,6 @@ export async function POST(request: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // Update grade remarks to Dropped
   await supabase
     .from("grades")
     .update({ remarks: "Dropped" })

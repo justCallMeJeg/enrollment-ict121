@@ -23,20 +23,20 @@ export async function PATCH(
 
   const supabase = await getSupabaseServerClient()
 
-  // Verify enrollment belongs to a course taught by this professor
+  // Verify enrollment belongs to a classroom taught by this professor
   const { data: enrollment } = await supabase
     .from("enrollments")
-    .select("id, courses(professor_id)")
+    .select("id, classrooms(professor_id)")
     .eq("id", enrollmentId)
     .single()
 
-  const course = enrollment?.courses
-    ? Array.isArray(enrollment.courses)
-      ? enrollment.courses[0]
-      : enrollment.courses
+  const classroom = enrollment?.classrooms
+    ? Array.isArray(enrollment.classrooms)
+      ? enrollment.classrooms[0]
+      : enrollment.classrooms
     : null
 
-  if (!enrollment || course?.professor_id !== session.userId) {
+  if (!enrollment || classroom?.professor_id !== session.userId) {
     return NextResponse.json({ error: "Not authorized" }, { status: 403 })
   }
 
@@ -63,20 +63,20 @@ export async function DELETE(
   const { enrollmentId } = await params
   const supabase = await getSupabaseServerClient()
 
-  // Verify enrollment belongs to a course taught by this professor
+  // Verify enrollment belongs to a classroom taught by this professor
   const { data: enrollment } = await supabase
     .from("enrollments")
-    .select("id, courses(professor_id)")
+    .select("id, classrooms(professor_id)")
     .eq("id", enrollmentId)
     .single()
 
-  const course = enrollment?.courses
-    ? Array.isArray(enrollment.courses)
-      ? enrollment.courses[0]
-      : enrollment.courses
+  const classroom = enrollment?.classrooms
+    ? Array.isArray(enrollment.classrooms)
+      ? enrollment.classrooms[0]
+      : enrollment.classrooms
     : null
 
-  if (!enrollment || course?.professor_id !== session.userId) {
+  if (!enrollment || classroom?.professor_id !== session.userId) {
     return NextResponse.json({ error: "Not authorized" }, { status: 403 })
   }
 

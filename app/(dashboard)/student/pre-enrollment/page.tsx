@@ -3,7 +3,7 @@ import { headers } from "next/headers"
 import { PageHeader } from "@/components/shared/page-header"
 import { PreEnrollmentList } from "@/components/student/pre-enrollment-list"
 import { EmptyState } from "@/components/shared/empty-state"
-import type { CourseWithEligibility } from "@/types"
+import type { ClassroomWithEligibility } from "@/types"
 
 export default async function PreEnrollmentPage() {
   const headersList = await headers()
@@ -42,53 +42,65 @@ export default async function PreEnrollmentPage() {
     return <EmptyState title="Student profile not found" />
   }
 
-  // Derive semester from the upcoming year's label (e.g. "2024-2025 1st Semester" → "1st")
-  const upcomingSemester: "1st" | "2nd" | "summer" = upcomingYear.label.includes("1st")
-    ? "1st"
-    : upcomingYear.label.includes("2nd")
-    ? "2nd"
-    : "summer"
+  // Fetch all classrooms for the upcoming year
+  const { data: classrooms } = await supabase
+    .from("classrooms")
+    .select(`
+      id, section,
+      courses!inner(id, course_code, name, semester, units, year_level, program_id,
+        prerequisite:prerequisite_course_id(id, course_code, name)),
+      professors(faculty_id, users(name)),
+      semesters!inner(academic_year_id)
+    `)
+    .eq("semesters.academic_year_id", upcomingYear.id)
+    .order("created_at")
 
-  // Courses scoped to upcoming year, student's program/year level, and the year's semester.
-  // Courses with null program_id are cross-program (applicable to all students).
-  const { data: courses } = await supabase
-    .from("courses")
-    .select("*, professors(faculty_id, users(name)), prerequisite:prerequisite_course_id(id, course_code, name)")
-    .eq("academic_year_id", upcomingYear.id)
-    .or(`program_id.eq.${student.program_id},program_id.is.null`)
-    .eq("year_level", student.year_level)
-    .eq("semester", upcomingSemester)
-    .order("course_code")
+  // Filter classrooms to those matching the student's program and year level
+  const relevant = (classrooms ?? []).filter((cr) => {
+    const course = Array.isArray(cr.courses) ? cr.courses[0] : cr.courses
+    if (!course) return false
+    return (
+      course.year_level === student.year_level &&
+      (course.program_id === null || course.program_id === student.program_id)
+    )
+  })
 
+  // Which classrooms is this student already pre-enrolled in?
   const { data: preEnrolled } = await supabase
     .from("pre_enrollments")
-    .select("course_id")
+    .select("classroom_id")
     .eq("student_id", userId)
-    .eq("academic_year_id", upcomingYear.id)
     .eq("status", "pending")
 
-  const preEnrolledIds = new Set((preEnrolled ?? []).map((p) => p.course_id))
+  const preEnrolledIds = new Set((preEnrolled ?? []).map((p) => p.classroom_id))
 
-  // Collect all prerequisite course codes needed — one query covers all of them
-  const prereqCodes = (courses ?? [])
-    .map((c) => (c as { prerequisite?: { course_code: string } | null }).prerequisite?.course_code)
+  // Collect all prerequisite course codes to check
+  const prereqCodes = relevant
+    .map((cr) => {
+      const course = Array.isArray(cr.courses) ? cr.courses[0] : cr.courses
+      const prereq = course?.prerequisite
+      const prereqData = Array.isArray(prereq) ? prereq[0] : prereq
+      return prereqData?.course_code ?? null
+    })
     .filter(Boolean) as string[]
 
-  // Single query instead of N: fetch all the student's enrollments and resolve in-memory.
-  // Ordered newest-first so the first seen entry per course_code is the most recent attempt.
+  // Fetch all enrollment history for prerequisite checking
   const passedCodes = new Set<string>()
   if (prereqCodes.length > 0) {
     const { data: allEnrollments } = await supabase
       .from("enrollments")
-      .select("grades(grade), courses!inner(course_code)")
+      .select("grades(grade), classrooms!inner(courses!inner(course_code))")
       .eq("student_id", userId)
       .eq("status", "enrolled")
       .order("created_at", { ascending: false })
 
     const seen = new Set<string>()
     for (const e of allEnrollments ?? []) {
-      const course = Array.isArray(e.courses) ? e.courses[0] : e.courses
-      const code = course?.course_code
+      const classroom = Array.isArray(e.classrooms) ? e.classrooms[0] : e.classrooms
+      const course = classroom?.courses
+        ? Array.isArray(classroom.courses) ? classroom.courses[0] : classroom.courses
+        : null
+      const code = (course as { course_code: string } | null)?.course_code
       if (!code || !prereqCodes.includes(code) || seen.has(code)) continue
       seen.add(code)
       const gradeData = Array.isArray(e.grades) ? e.grades[0] : e.grades
@@ -97,14 +109,31 @@ export default async function PreEnrollmentPage() {
     }
   }
 
-  const coursesWithEligibility: CourseWithEligibility[] = (courses ?? []).map((course) => {
-    const prereq = (course as { prerequisite?: { course_code: string } | null }).prerequisite
-    const eligible = !prereq?.course_code || passedCodes.has(prereq.course_code)
+  const classroomsWithEligibility: ClassroomWithEligibility[] = relevant.map((cr) => {
+    const course = Array.isArray(cr.courses) ? cr.courses[0] : cr.courses
+    const professor = cr.professors
+    const professorUser = professor
+      ? Array.isArray(professor.users)
+        ? professor.users[0]
+        : professor.users
+      : null
+    const prereq = course?.prerequisite
+    const prereqData = prereq ? (Array.isArray(prereq) ? prereq[0] : prereq) : null
+    const eligible = !prereqData?.course_code || passedCodes.has(prereqData.course_code)
+
     return {
-      ...course,
-      semester: course.semester as "1st" | "2nd" | "summer",
+      id: cr.id,
+      section: cr.section,
+      course_id: course?.id ?? "",
+      course_code: course?.course_code ?? "",
+      course_name: course?.name ?? "",
+      semester: course?.semester ?? "",
+      units: course?.units ?? 0,
+      year_level: course?.year_level ?? 0,
+      professor_name: professorUser?.name ?? null,
+      prerequisite_code: prereqData?.course_code ?? null,
       eligible,
-      pre_enrolled: preEnrolledIds.has(course.id),
+      pre_enrolled: preEnrolledIds.has(cr.id),
     }
   })
 
@@ -114,10 +143,7 @@ export default async function PreEnrollmentPage() {
         title="Pre-Enrollment"
         description={`Select courses for ${upcomingYear.label}`}
       />
-      <PreEnrollmentList
-        courses={coursesWithEligibility}
-        academicYearId={upcomingYear.id}
-      />
+      <PreEnrollmentList classrooms={classroomsWithEligibility} />
     </div>
   )
 }
