@@ -193,30 +193,23 @@ function SemesterCombobox({
     </DropdownMenuContent>
   )
 
+  if (!currentSemester || !currentYearId) return null
+
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
-      {currentSemester && currentYearId ? (
-        <div className="flex items-center">
-          <Link
-            href={`/admin/academic-years/${currentYearId}`}
-            className="text-sm font-medium hover:text-primary transition-colors"
-          >
-            {semesterLabel(currentSemester.term)}
-          </Link>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon-xs" className="ml-0.5 text-muted-foreground">
-              <ChevronsUpDown className="size-3.5" />
-            </Button>
-          </DropdownMenuTrigger>
-        </div>
-      ) : (
+      <div className="flex items-center">
+        <Link
+          href={`/admin/${currentYearId}/${currentSemesterId}`}
+          className="text-sm font-medium hover:text-primary transition-colors"
+        >
+          {semesterLabel(currentSemester.term)}
+        </Link>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="sm" className="text-muted-foreground font-medium">
-            Select Semester
+          <Button variant="ghost" size="icon-xs" className="ml-0.5 text-muted-foreground">
             <ChevronsUpDown className="size-3.5" />
           </Button>
         </DropdownMenuTrigger>
-      )}
+      </div>
       {dropdownContent}
     </DropdownMenu>
   )

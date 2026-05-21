@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext } from "react"
+import { createContext, useContext, useMemo } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { useAcademicYears } from "@/lib/hooks/use-academic-years"
 import { useSemesters } from "@/lib/hooks/use-semesters"
@@ -26,6 +26,18 @@ export function AdminYearContextProvider({ children }: { children: React.ReactNo
   const { years } = useAcademicYears()
   const { semesters } = useSemesters(yearId)
 
+  // Resolve effective semester: URL param → active → pre_enrollment → first by creation order
+  const effectiveSemesterId = useMemo(() => {
+    if (semId) return semId
+    if (!semesters.length) return null
+    return (
+      semesters.find((s) => s.status === "active")?.id ??
+      semesters.find((s) => s.status === "pre_enrollment")?.id ??
+      semesters[0]?.id ??
+      null
+    )
+  }, [semId, semesters])
+
   function selectYear(id: string) {
     router.push(`/admin/${id}`)
   }
@@ -40,7 +52,7 @@ export function AdminYearContextProvider({ children }: { children: React.ReactNo
         years,
         semesters,
         currentYearId: yearId,
-        currentSemesterId: semId,
+        currentSemesterId: effectiveSemesterId,
         selectYear,
         selectSemester,
       }}

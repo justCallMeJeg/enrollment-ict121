@@ -178,6 +178,7 @@ export function Sidebar({ role }: { role: UserRole }) {
   if (years.length === 0) return null
 
   const items = NAV_ITEMS[role]
+  const showAcademics = pathname.startsWith("/admin/academic")
 
   function renderNavItem(item: NavItem) {
     const Icon = item.icon
@@ -235,6 +236,7 @@ export function Sidebar({ role }: { role: UserRole }) {
       <nav className="flex flex-col gap-1 p-2 pt-3 flex-1 overflow-y-auto overflow-x-hidden">
         {items.map((section) => {
           if (isGroup(section)) {
+            if (!showAcademics) return null
             return (
               <div key={section.groupLabel}>
                 <SidebarSectionLabel label={section.groupLabel} expanded={expanded} />
