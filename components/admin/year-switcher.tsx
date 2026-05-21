@@ -3,7 +3,6 @@
 import { useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import {
@@ -15,6 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Check, ChevronsUpDown, GraduationCap, Plus, Search } from "lucide-react"
 import type { AdminYearContext, AcademicYearStatus } from "@/types"
+import { Button } from "@/components/ui/button"
 
 const STATUS_BADGE: Record<AcademicYearStatus, "default" | "secondary" | "outline"> = {
   active: "default",
@@ -58,12 +58,7 @@ export function YearSwitcher({
       }}
     >
       <DropdownMenuTrigger asChild>
-        <button
-          className={cn(
-            "flex items-center gap-1.5 rounded-lg border bg-card px-2 py-1.5 text-sm font-medium",
-            "hover:bg-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          )}
-        >
+        <Button variant="outline" className="gap-1.5">
           <span className="flex size-5 items-center justify-center rounded bg-muted shrink-0">
             <GraduationCap className="size-3 text-muted-foreground" />
           </span>
@@ -79,7 +74,7 @@ export function YearSwitcher({
             </Badge>
           )}
           <ChevronsUpDown className="size-3.5 text-muted-foreground shrink-0" />
-        </button>
+        </Button>
       </DropdownMenuTrigger>
 
       <DropdownMenuContent

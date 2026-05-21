@@ -16,6 +16,7 @@ import {
 import { Check, ChevronsUpDown, Plus, Search } from "lucide-react"
 import { semesterLabel } from "@/types"
 import type { AdminYearContext, AdminSemesterContext, AcademicYearStatus, SemesterStatus } from "@/types"
+import { Button } from "@/components/ui/button"
 
 const YEAR_STATUS_BADGE: Record<AcademicYearStatus, "default" | "secondary" | "outline"> = {
   active: "default",
@@ -128,17 +129,17 @@ function YearCombobox({
             Academic Year {currentYear.label}
           </Link>
           <DropdownMenuTrigger asChild>
-            <button className="ml-0.5 flex items-center justify-center rounded p-0.5 hover:bg-accent hover:text-accent-foreground transition-colors focus-visible:outline-none">
-              <ChevronsUpDown className="size-3.5 text-muted-foreground" />
-            </button>
+            <Button variant="ghost" size="icon-xs" className="ml-0.5 text-muted-foreground">
+              <ChevronsUpDown className="size-3.5" />
+            </Button>
           </DropdownMenuTrigger>
         </div>
       ) : (
         <DropdownMenuTrigger asChild>
-          <button className="flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none">
+          <Button variant="ghost" size="sm" className="text-muted-foreground font-medium">
             Select Year
-            <ChevronsUpDown className="size-3.5 shrink-0" />
-          </button>
+            <ChevronsUpDown className="size-3.5" />
+          </Button>
         </DropdownMenuTrigger>
       )}
       {dropdownContent}
@@ -203,17 +204,17 @@ function SemesterCombobox({
             {semesterLabel(currentSemester.term)}
           </Link>
           <DropdownMenuTrigger asChild>
-            <button className="ml-0.5 flex items-center justify-center rounded p-0.5 hover:bg-accent hover:text-accent-foreground transition-colors focus-visible:outline-none">
-              <ChevronsUpDown className="size-3.5 text-muted-foreground" />
-            </button>
+            <Button variant="ghost" size="icon-xs" className="ml-0.5 text-muted-foreground">
+              <ChevronsUpDown className="size-3.5" />
+            </Button>
           </DropdownMenuTrigger>
         </div>
       ) : (
         <DropdownMenuTrigger asChild>
-          <button className="flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none">
+          <Button variant="ghost" size="sm" className="text-muted-foreground font-medium">
             Select Semester
-            <ChevronsUpDown className="size-3.5 shrink-0" />
-          </button>
+            <ChevronsUpDown className="size-3.5" />
+          </Button>
         </DropdownMenuTrigger>
       )}
       {dropdownContent}

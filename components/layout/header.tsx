@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { GraduationCap, LogOut } from "lucide-react"
 import type { SessionPayload } from "@/types"
+import { Button } from "@/components/ui/button"
 
 function getInitials(name: string) {
   return name
@@ -48,16 +49,16 @@ export function Header({
       <div className="flex-1" />
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="flex items-center gap-2 rounded-md px-2 py-1 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <Button variant="ghost" className="gap-2 px-2">
             <Avatar className="size-7">
               <AvatarFallback className="text-xs">
                 {getInitials(user.name)}
               </AvatarFallback>
             </Avatar>
-            <span className="text-sm font-medium hidden sm:block">
+            <span className="hidden sm:block">
               {user.name}
             </span>
-          </button>
+          </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-48">
           <div className="px-2 py-1.5">
