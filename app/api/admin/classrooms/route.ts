@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     .select(`
       id, section, created_at,
       course_id, academic_year_id, semester_id, professor_id,
-      courses!course_id(id, course_code, name, semester, units, year_level, program_id),
+      courses!course_id(id, course_code, name, semester, units, year_level),
       professors!professor_id(faculty_id, users!user_id(name)),
       semesters!semester_id(term, status)
     `)
