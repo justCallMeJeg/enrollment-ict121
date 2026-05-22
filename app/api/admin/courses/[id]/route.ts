@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getSupabaseServerClient } from "@/lib/supabase/server"
-import { revalidateTag } from "next/cache"
 
 export async function PATCH(
   request: NextRequest,
@@ -27,7 +26,6 @@ export async function PATCH(
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  revalidateTag("courses")
   return NextResponse.json(data)
 }
 
@@ -39,6 +37,5 @@ export async function DELETE(
   const supabase = await getSupabaseServerClient()
   const { error } = await supabase.from("courses").delete().eq("id", id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  revalidateTag("courses")
   return NextResponse.json({ ok: true })
 }

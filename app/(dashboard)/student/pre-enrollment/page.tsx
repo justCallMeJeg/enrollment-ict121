@@ -47,10 +47,10 @@ export default async function PreEnrollmentPage() {
     .from("classrooms")
     .select(`
       id, section,
-      courses!inner(id, course_code, name, semester, units, year_level, program_id,
+      courses!course_id!inner(id, course_code, name, semester, units, year_level, program_id,
         prerequisite:prerequisite_course_id(id, course_code, name)),
-      professors(faculty_id, users(name)),
-      semesters!inner(academic_year_id)
+      professors!professor_id(faculty_id, users!user_id(name)),
+      semesters!semester_id!inner(academic_year_id)
     `)
     .eq("semesters.academic_year_id", upcomingYear.id)
     .order("created_at")
@@ -111,7 +111,7 @@ export default async function PreEnrollmentPage() {
 
   const classroomsWithEligibility: ClassroomWithEligibility[] = relevant.map((cr) => {
     const course = Array.isArray(cr.courses) ? cr.courses[0] : cr.courses
-    const professor = cr.professors
+    const professor = Array.isArray(cr.professors) ? cr.professors[0] : cr.professors
     const professorUser = professor
       ? Array.isArray(professor.users)
         ? professor.users[0]

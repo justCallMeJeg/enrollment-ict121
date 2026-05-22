@@ -10,10 +10,13 @@ export async function GET(request: NextRequest) {
   // Distinct courses that have at least one classroom in this academic year
   const { data, error } = await supabase
     .from("classrooms")
-    .select("course_id, semester_id, semesters!inner(term, status), courses!inner(id, course_code, name, semester, units, year_level, program_id, programs(name, code))")
+    .select("course_id, semester_id, semesters!semester_id(term, status), courses!course_id(id, course_code, name, semester, units, year_level, program_id, programs!program_id(name, code))")
     .eq("academic_year_id", yearId)
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    console.error("[courses/offered GET]", error)
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
 
   // Deduplicate by course_id and attach semester info
   const seen = new Set<string>()
@@ -27,7 +30,8 @@ export async function GET(request: NextRequest) {
     if (!course) return acc
     if (!seen.has(course.id)) {
       seen.add(course.id)
-      acc.push({ ...course, semesters: [] })
+      const programs = Array.isArray(course.programs) ? (course.programs[0] ?? null) : (course.programs ?? null)
+      acc.push({ ...course, programs, semesters: [] })
     }
     const sem = Array.isArray(row.semesters) ? row.semesters[0] : row.semesters
     if (sem) {

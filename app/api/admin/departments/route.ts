@@ -1,6 +1,5 @@
 ﻿import { NextRequest, NextResponse } from "next/server"
 import { getSupabaseServerClient } from "@/lib/supabase/server"
-import { revalidateTag } from "next/cache"
 
 export async function GET() {
   const supabase = await getSupabaseServerClient()
@@ -25,6 +24,5 @@ export async function POST(request: NextRequest) {
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  revalidateTag("programs")
   return NextResponse.json(data, { status: 201 })
 }

@@ -1,6 +1,5 @@
-﻿import { NextRequest, NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { getSupabaseServerClient } from "@/lib/supabase/server"
-import { revalidateTag } from "next/cache"
 
 export async function POST(
   _request: NextRequest,
@@ -42,38 +41,42 @@ export async function POST(
     return NextResponse.json({ error: activateError.message }, { status: 500 })
   }
 
-  // Convert pending pre-enrollments to enrollments
-  const { data: preEnrollments } = await supabase
-    .from("pre_enrollments")
-    .select("student_id, course_id, academic_year_id")
+  // Get all classrooms for this academic year so we can find matching pre-enrollments
+  const { data: yearClassrooms } = await supabase
+    .from("classrooms")
+    .select("id")
     .eq("academic_year_id", id)
-    .eq("status", "pending")
 
-  if (preEnrollments && preEnrollments.length > 0) {
-    const enrollments = preEnrollments.map((pe) => ({
-      student_id: pe.student_id,
-      course_id: pe.course_id,
-      academic_year_id: pe.academic_year_id,
-      status: "enrolled" as const,
-    }))
+  const classroomIds = (yearClassrooms ?? []).map((c) => c.id)
 
-    const { data: inserted } = await supabase
-      .from("enrollments")
-      .insert(enrollments)
-      .select("id")
+  if (classroomIds.length > 0) {
+    const { data: preEnrollments } = await supabase
+      .from("pre_enrollments")
+      .select("student_id, classroom_id")
+      .in("classroom_id", classroomIds)
+      .eq("status", "pending")
 
-    if (inserted && inserted.length > 0) {
-      const gradeRows = inserted.map((e) => ({ enrollment_id: e.id }))
-      await supabase.from("grades").insert(gradeRows)
+    if (preEnrollments && preEnrollments.length > 0) {
+      const enrollments = preEnrollments.map((pe) => ({
+        student_id: pe.student_id,
+        classroom_id: pe.classroom_id,
+        status: "enrolled" as const,
+      }))
+
+      const { data: inserted } = await supabase
+        .from("enrollments")
+        .insert(enrollments)
+        .select("id")
+
+      if (inserted && inserted.length > 0) {
+        const gradeRows = inserted.map((e) => ({ enrollment_id: e.id }))
+        await supabase.from("grades").insert(gradeRows)
+      }
     }
   }
 
   // Increment all students' year_level by 1 (capped at 6)
   await supabase.rpc("increment_student_year_levels")
 
-  revalidateTag("academic-years")
-  revalidateTag("courses")
-  revalidateTag("users")
-  revalidateTag("stats")
   return NextResponse.json({ ok: true })
 }

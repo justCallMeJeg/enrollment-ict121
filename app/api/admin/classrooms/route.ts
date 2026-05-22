@@ -12,9 +12,9 @@ export async function GET(request: NextRequest) {
     .select(`
       id, section, created_at,
       course_id, academic_year_id, semester_id, professor_id,
-      courses(id, course_code, name, semester, units, year_level, program_id),
-      professors(faculty_id, users(name)),
-      semesters(term, status)
+      courses!course_id(id, course_code, name, semester, units, year_level, program_id),
+      professors!professor_id(faculty_id, users!user_id(name)),
+      semesters!semester_id(term, status)
     `)
     .order("created_at", { ascending: true })
 
@@ -22,7 +22,10 @@ export async function GET(request: NextRequest) {
   if (semId) query = query.eq("semester_id", semId)
 
   const { data, error } = await query
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    console.error("[classrooms GET]", error)
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
 
   const classroomIds = (data ?? []).map((c) => c.id)
   let enrolledCounts: Record<string, number> = {}

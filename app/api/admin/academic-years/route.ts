@@ -1,6 +1,5 @@
-import { NextRequest, NextResponse } from "next/server"
+﻿import { NextRequest, NextResponse } from "next/server"
 import { getSupabaseServerClient } from "@/lib/supabase/server"
-import { revalidateTag } from "next/cache"
 
 const SEMESTER_TERMS = ["1st", "2nd", "midyear"] as const
 
@@ -57,8 +56,5 @@ export async function POST(request: NextRequest) {
       status: "draft",
     }))
   )
-
-  revalidateTag("academic-years")
-  revalidateTag("semesters")
   return NextResponse.json(newYear, { status: 201 })
 }
