@@ -85,7 +85,11 @@ export function PreEnrollmentList({ classrooms }: Props) {
               <div className="flex gap-2 flex-wrap">
                 <Badge variant="outline">{classroom.semester} Sem</Badge>
                 <Badge variant="outline">{classroom.units} units</Badge>
-                <Badge variant="secondary">Section {classroom.section}</Badge>
+                <Badge variant="secondary">
+                  {classroom.program_code
+                    ? `${classroom.program_code}-${classroom.year_level}${classroom.section}`
+                    : classroom.section}
+                </Badge>
               </div>
               {classroom.professor_name && (
                 <p className="text-xs text-muted-foreground">{classroom.professor_name}</p>

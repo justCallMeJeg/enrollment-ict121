@@ -42,35 +42,26 @@ export default async function PreEnrollmentPage() {
     return <EmptyState title="Student profile not found" />
   }
 
-  // Fetch all classrooms for the upcoming year with junction table data
+  // Fetch classrooms for the upcoming year — filter directly by classroom's program/year_level
   const { data: classrooms } = await supabase
     .from("classrooms")
     .select(`
-      id, section,
+      id, section, program_id, year_level,
       courses!course_id!inner(
         id, course_code, name, semester, units, year_level,
-        course_programs(program_id),
         course_prerequisites!course_prerequisites_course_id_fkey(
           prerequisite_course_id,
           prereq_course:courses!course_prerequisites_prerequisite_course_id_fkey(id, course_code)
         )
       ),
       professors!professor_id(faculty_id, users!user_id(name)),
-      semesters!semester_id!inner(academic_year_id)
+      semesters!semester_id!inner(academic_year_id),
+      programs!program_id(code)
     `)
     .eq("semesters.academic_year_id", upcomingYear.id)
+    .eq("program_id", student.program_id)
+    .eq("year_level", student.year_level)
     .order("created_at")
-
-  // Filter classrooms to those matching the student's program and year level
-  const relevant = (classrooms ?? []).filter((cr) => {
-    const course = Array.isArray(cr.courses) ? cr.courses[0] : cr.courses
-    if (!course) return false
-    const coursePrograms = (course.course_programs ?? []) as { program_id: string }[]
-    return (
-      course.year_level === student.year_level &&
-      (coursePrograms.length === 0 || coursePrograms.some((cp) => cp.program_id === student.program_id))
-    )
-  })
 
   // Which classrooms is this student already pre-enrolled in?
   const { data: preEnrolled } = await supabase
@@ -83,7 +74,7 @@ export default async function PreEnrollmentPage() {
 
   // Collect all prerequisite course codes needed for eligibility checking
   const allPrereqCodes = new Set<string>()
-  for (const cr of relevant) {
+  for (const cr of classrooms ?? []) {
     const course = Array.isArray(cr.courses) ? cr.courses[0] : cr.courses
     const prereqs = (course?.course_prerequisites ?? []) as {
       prerequisite_course_id: string
@@ -120,12 +111,13 @@ export default async function PreEnrollmentPage() {
     }
   }
 
-  const classroomsWithEligibility: ClassroomWithEligibility[] = relevant.map((cr) => {
+  const classroomsWithEligibility: ClassroomWithEligibility[] = (classrooms ?? []).map((cr) => {
     const course = Array.isArray(cr.courses) ? cr.courses[0] : cr.courses
     const professor = Array.isArray(cr.professors) ? cr.professors[0] : cr.professors
     const professorUser = professor
       ? Array.isArray(professor.users) ? professor.users[0] : professor.users
       : null
+    const prog = Array.isArray(cr.programs) ? cr.programs[0] : cr.programs
 
     const prereqs = (course?.course_prerequisites ?? []) as {
       prerequisite_course_id: string
@@ -145,12 +137,13 @@ export default async function PreEnrollmentPage() {
     return {
       id: cr.id,
       section: cr.section,
+      program_code: (prog as { code: string } | null)?.code ?? "",
       course_id: course?.id ?? "",
       course_code: course?.course_code ?? "",
       course_name: course?.name ?? "",
       semester: course?.semester ?? "",
       units: course?.units ?? 0,
-      year_level: course?.year_level ?? 0,
+      year_level: cr.year_level,
       professor_name: (professorUser as { name: string } | null)?.name ?? null,
       prerequisite_codes: prerequisiteCodes,
       eligible,

@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
   // Find classrooms from the source year that match the same term
   const { data: source, error: srcErr } = await supabase
     .from("classrooms")
-    .select("course_id, section, semesters!inner(term)")
+    .select("course_id, program_id, year_level, section, semesters!inner(term)")
     .eq("academic_year_id", fromYearId)
     .eq("semesters.term", targetSem.term)
 
@@ -36,6 +36,8 @@ export async function POST(request: NextRequest) {
 
   const rows = source.map((c) => ({
     course_id: c.course_id,
+    program_id: c.program_id,
+    year_level: c.year_level,
     academic_year_id: toYearId,
     semester_id: toSemesterId,
     professor_id: null,

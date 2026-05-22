@@ -10,6 +10,8 @@ export async function PATCH(
   const patch: Record<string, unknown> = {}
   if (body.professor_id !== undefined) patch.professor_id = body.professor_id ?? null
   if (body.section !== undefined) patch.section = body.section
+  if (body.program_id !== undefined) patch.program_id = body.program_id
+  if (body.year_level !== undefined) patch.year_level = body.year_level
 
   const supabase = await getSupabaseServerClient()
   const { data, error } = await supabase

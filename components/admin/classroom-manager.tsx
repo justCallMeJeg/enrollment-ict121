@@ -5,6 +5,13 @@ import { mutate } from "swr"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { DataTable } from "@/components/shared/data-table"
 import { ConfirmModal } from "@/components/shared/confirm-modal"
 import { FormModal } from "@/components/shared/form-modal"
@@ -30,8 +37,11 @@ type ClassroomRow = {
   professor_id: string | null
   academic_year_id: string
   semester_id: string
-  courses: { id: string; course_code: string; name: string; semester: string } | { id: string; course_code: string; name: string; semester: string }[] | null
+  program_id: string
+  year_level: number
+  courses: { id: string; course_code: string; name: string; semester: string; year_level: number } | { id: string; course_code: string; name: string; semester: string; year_level: number }[] | null
   professors: { faculty_id: string; users: { name: string } | { name: string }[] | null } | null
+  programs: { id: string; name: string; code: string } | { id: string; name: string; code: string }[] | null
   enrolled_count: number
 }
 
@@ -41,6 +51,12 @@ type CatalogCourse = {
   name: string
   semester: string
   year_level: number
+}
+
+type ProgramOption = {
+  id: string
+  name: string
+  code: string
 }
 
 type ProfessorOption = {
@@ -54,14 +70,28 @@ type AcademicYear = {
   label: string
 }
 
-const INIT_FORM = {
+type FormState = {
+  course_id: string
+  program_id: string
+  year_level: string
+  section: string
+  professor_id: string
+}
+
+const INIT_FORM: FormState = {
   course_id: "",
-  professor_id: "",
+  program_id: "",
+  year_level: "1",
   section: "",
+  professor_id: "",
 }
 
 function getCourse(classroom: ClassroomRow) {
   return Array.isArray(classroom.courses) ? classroom.courses[0] : classroom.courses
+}
+
+function getProgram(classroom: ClassroomRow) {
+  return Array.isArray(classroom.programs) ? classroom.programs[0] : classroom.programs
 }
 
 function getProfessor(classroom: ClassroomRow) {
@@ -74,10 +104,16 @@ function getProfessorName(p: ClassroomRow["professors"]) {
   return u?.name ?? p.faculty_id
 }
 
+function formatSection(prog: ProgramOption | null | undefined, yearLevel: number, section: string) {
+  if (!prog || !section) return section || "—"
+  return `${prog.code}-${yearLevel}${section}`
+}
+
 export function ClassroomManager({
   classrooms,
   courses,
   professors,
+  programs,
   yearId,
   semId,
   years,
@@ -85,11 +121,12 @@ export function ClassroomManager({
   classrooms: ClassroomRow[]
   courses: CatalogCourse[]
   professors: ProfessorOption[]
+  programs: ProgramOption[]
   yearId: string
   semId: string
   years: AcademicYear[]
 }) {
-  const [form, setForm] = useState(INIT_FORM)
+  const [form, setForm] = useState<FormState>(INIT_FORM)
   const [loading, setLoading] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<string | null>(null)
@@ -108,17 +145,25 @@ export function ClassroomManager({
     const q = search.toLowerCase()
     return classrooms.filter((c) => {
       const course = getCourse(c)
+      const prog = getProgram(c)
+      const sectionFull = formatSection(prog, c.year_level, c.section).toLowerCase()
       return (
         course?.course_code.toLowerCase().includes(q) ||
         course?.name.toLowerCase().includes(q) ||
-        c.section.toLowerCase().includes(q) ||
+        sectionFull.includes(q) ||
         getProfessorName(getProfessor(c))?.toLowerCase().includes(q)
       )
     })
   }, [classrooms, search])
 
-  function set(key: string, value: string) {
-    setForm((p) => ({ ...p, [key]: value }))
+  // When a course is selected while creating, auto-set year_level from the course
+  function handleCourseChange(courseId: string) {
+    const course = courses.find((c) => c.id === courseId)
+    setForm((p) => ({
+      ...p,
+      course_id: courseId,
+      year_level: course ? String(course.year_level) : p.year_level,
+    }))
   }
 
   function openCreate() {
@@ -131,8 +176,10 @@ export function ClassroomManager({
     const course = getCourse(row)
     setForm({
       course_id: course?.id ?? "",
-      professor_id: row.professor_id ?? "",
+      program_id: row.program_id ?? "",
+      year_level: String(row.year_level ?? 1),
       section: row.section,
+      professor_id: row.professor_id ?? "",
     })
     setEditTarget(row.id)
     setModalOpen(true)
@@ -150,11 +197,18 @@ export function ClassroomManager({
     try {
       const isEdit = !!editTarget
       const body = isEdit
-        ? { professor_id: form.professor_id || null, section: form.section }
+        ? {
+            program_id: form.program_id || undefined,
+            year_level: Number(form.year_level) || undefined,
+            professor_id: form.professor_id || null,
+            section: form.section,
+          }
         : {
             course_id: form.course_id,
             academic_year_id: yearId,
             semester_id: semId,
+            program_id: form.program_id,
+            year_level: Number(form.year_level),
             professor_id: form.professor_id || null,
             section: form.section,
           }
@@ -234,7 +288,16 @@ export function ClassroomManager({
     code: c.course_code,
   }))
 
+  const programOptions = programs.map((p) => ({ value: p.id, label: p.name, code: p.code }))
+
   const otherYears = years.filter((y) => y.id !== yearId)
+
+  // Section preview for the form
+  const selectedProgram = programs.find((p) => p.id === form.program_id)
+  const sectionPreview =
+    selectedProgram && form.section
+      ? formatSection(selectedProgram, Number(form.year_level), form.section)
+      : null
 
   return (
     <div>
@@ -287,7 +350,12 @@ export function ClassroomManager({
             header: "Section",
             render: (row) => {
               const c = row as unknown as ClassroomRow
-              return <Badge variant="outline">{c.section}</Badge>
+              const prog = getProgram(c)
+              return (
+                <Badge variant="outline">
+                  {formatSection(prog, c.year_level, c.section)}
+                </Badge>
+              )
             },
           },
           {
@@ -308,11 +376,7 @@ export function ClassroomManager({
             header: "Enrolled",
             render: (row) => {
               const c = row as unknown as ClassroomRow
-              return (
-                <span className="tabular-nums">
-                  {c.enrolled_count}
-                </span>
-              )
+              return <span className="tabular-nums">{c.enrolled_count}</span>
             },
           },
           {
@@ -355,7 +419,7 @@ export function ClassroomManager({
           <Combobox
             options={courseOptions}
             value={form.course_id}
-            onValueChange={(v) => set("course_id", v)}
+            onValueChange={handleCourseChange}
             placeholder="Select a course…"
             searchPlaceholder="Search courses…"
             emptyText="No courses found."
@@ -363,23 +427,62 @@ export function ClassroomManager({
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="section">
-            Section <span className="text-destructive">*</span>
-          </Label>
-          <Input
-            id="section"
-            value={form.section}
-            onChange={(e) => set("section", e.target.value)}
-            placeholder="e.g. A, BSIT-3A"
-            required
+          <Label>Program <span className="text-destructive">*</span></Label>
+          <Combobox
+            options={programOptions}
+            value={form.program_id}
+            onValueChange={(v) => setForm((p) => ({ ...p, program_id: v }))}
+            placeholder="Select a program…"
+            searchPlaceholder="Search programs…"
+            emptyText="No programs found."
+            disabled={!!editTarget}
           />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>Year Level <span className="text-destructive">*</span></Label>
+            <Select
+              value={form.year_level}
+              onValueChange={(v) => setForm((p) => ({ ...p, year_level: v }))}
+              disabled={!!editTarget}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent position="popper">
+                {[1, 2, 3, 4, 5, 6].map((y) => (
+                  <SelectItem key={y} value={String(y)}>Year {y}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="section">
+              Section <span className="text-destructive">*</span>
+            </Label>
+            <div className="flex items-center gap-2">
+              <Input
+                id="section"
+                value={form.section}
+                onChange={(e) => setForm((p) => ({ ...p, section: e.target.value.toUpperCase() }))}
+                placeholder="e.g. A"
+                className="flex-1"
+                required
+              />
+              {sectionPreview && (
+                <Badge variant="secondary" className="shrink-0 font-mono">
+                  {sectionPreview}
+                </Badge>
+              )}
+            </div>
+          </div>
         </div>
         <div className="space-y-2">
           <Label>Professor <span className="text-xs text-muted-foreground font-normal">(optional)</span></Label>
           <Combobox
             options={professorOptions}
             value={form.professor_id}
-            onValueChange={(v) => set("professor_id", v)}
+            onValueChange={(v) => setForm((p) => ({ ...p, professor_id: v }))}
             placeholder="Assign professor (optional)"
             searchPlaceholder="Search professors…"
             emptyText="No professors found."

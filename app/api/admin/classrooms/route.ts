@@ -11,10 +11,11 @@ export async function GET(request: NextRequest) {
     .from("classrooms")
     .select(`
       id, section, created_at,
-      course_id, academic_year_id, semester_id, professor_id,
+      course_id, academic_year_id, semester_id, professor_id, program_id, year_level,
       courses!course_id(id, course_code, name, semester, units, year_level),
       professors!professor_id(faculty_id, users!user_id(name)),
-      semesters!semester_id(term, status)
+      semesters!semester_id(term, status),
+      programs!program_id(id, name, code)
     `)
     .order("created_at", { ascending: true })
 
@@ -53,10 +54,10 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const body = await request.json()
-  const { course_id, academic_year_id, semester_id, professor_id, section } = body
+  const { course_id, academic_year_id, semester_id, professor_id, program_id, year_level, section } = body
 
-  if (!course_id || !academic_year_id || !semester_id || !section) {
-    return NextResponse.json({ error: "course_id, academic_year_id, semester_id and section are required" }, { status: 400 })
+  if (!course_id || !academic_year_id || !semester_id || !program_id || !section) {
+    return NextResponse.json({ error: "course_id, academic_year_id, semester_id, program_id and section are required" }, { status: 400 })
   }
 
   const supabase = await getSupabaseServerClient()
@@ -67,6 +68,8 @@ export async function POST(request: NextRequest) {
       academic_year_id,
       semester_id,
       professor_id: professor_id ?? null,
+      program_id,
+      year_level: year_level ?? 1,
       section,
     })
     .select()

@@ -95,10 +95,13 @@ export type Classroom = {
   academic_year_id: string
   semester_id: string
   professor_id: string | null
+  program_id: string
+  year_level: number
   section: string
   created_at: string
   courses?: Course
   professors?: Professor
+  programs?: { id: string; name: string; code: string }
 }
 
 export type AcademicYearStatus = "draft" | "upcoming" | "active" | "ended"
@@ -154,6 +157,7 @@ export type Grade = {
 export type ClassroomWithEligibility = {
   id: string
   section: string
+  program_code: string
   course_id: string
   course_code: string
   course_name: string
