@@ -16,7 +16,7 @@ import { DataTable } from "@/components/shared/data-table"
 import { ConfirmModal } from "@/components/shared/confirm-modal"
 import { FormModal } from "@/components/shared/form-modal"
 import { TableToolbar } from "@/components/shared/table-toolbar"
-import { Combobox } from "@/components/shared/combobox"
+import { MultiCombobox } from "@/components/shared/combobox"
 import { Badge } from "@/components/ui/badge"
 import { Pencil, Plus, Trash2 } from "lucide-react"
 import { IconButton } from "@/components/shared/icon-button"
@@ -30,22 +30,30 @@ type CourseRow = {
   semester: string
   units: number
   year_level: number
-  program_id: string | null
-  prerequisite_course_id: string | null
-  programs: { name: string; code: string } | null
-  prerequisite: { course_code: string; name: string } | null
+  programs: { id: string; name: string; code: string }[]
+  prerequisites: { id: string; course_code: string; name: string }[]
+}
+
+type FormState = {
+  program_ids: string[]
+  course_code: string
+  name: string
+  year_level: string
+  semester: string
+  units: string
+  prerequisite_course_ids: string[]
 }
 
 const SEMESTERS = ["1st", "2nd", "midyear"]
 
-const INIT_FORM = {
-  program_id: "",
+const INIT_FORM: FormState = {
+  program_ids: [],
   course_code: "",
   name: "",
+  year_level: "1",
   semester: "1st",
   units: "3",
-  year_level: "1",
-  prerequisite_course_id: "",
+  prerequisite_course_ids: [],
 }
 
 export function CourseManager({
@@ -55,7 +63,7 @@ export function CourseManager({
   courses: CourseRow[]
   programs: Pick<Program, "id" | "name" | "code">[]
 }) {
-  const [form, setForm] = useState(INIT_FORM)
+  const [form, setForm] = useState<FormState>(INIT_FORM)
   const [loading, setLoading] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<string | null>(null)
@@ -77,14 +85,12 @@ export function CourseManager({
       const matchesYear =
         filterYear.length === 0 || filterYear.includes(String(c.year_level))
       const matchesProgram =
-        filterProgram.length === 0 || c.program_id === null || filterProgram.includes(c.program_id)
+        filterProgram.length === 0 ||
+        c.programs.length === 0 ||
+        c.programs.some((p) => filterProgram.includes(p.id))
       return matchesSearch && matchesSemester && matchesYear && matchesProgram
     })
   }, [courses, search, filterSemester, filterYear, filterProgram])
-
-  function set(key: string, value: string) {
-    setForm((p) => ({ ...p, [key]: value }))
-  }
 
   function openCreate() {
     setForm(INIT_FORM)
@@ -94,13 +100,13 @@ export function CourseManager({
 
   function openEdit(row: CourseRow) {
     setForm({
-      program_id: row.program_id ?? "",
+      program_ids: row.programs.map((p) => p.id),
       course_code: row.course_code,
       name: row.name,
+      year_level: String(row.year_level),
       semester: row.semester,
       units: String(row.units),
-      year_level: String(row.year_level),
-      prerequisite_course_id: row.prerequisite_course_id ?? "",
+      prerequisite_course_ids: row.prerequisites.map((p) => p.id),
     })
     setEditTarget(row.id)
     setModalOpen(true)
@@ -117,11 +123,13 @@ export function CourseManager({
     setLoading(true)
     try {
       const body = {
-        ...form,
+        program_ids: form.program_ids,
+        course_code: form.course_code,
+        name: form.name,
+        semester: form.semester,
         units: Number(form.units),
         year_level: Number(form.year_level),
-        program_id: form.program_id || null,
-        prerequisite_course_id: form.prerequisite_course_id || null,
+        prerequisite_course_ids: form.prerequisite_course_ids,
       }
       const url = editTarget ? `/api/admin/courses/${editTarget}` : "/api/admin/courses"
       const method = editTarget ? "PATCH" : "POST"
@@ -170,6 +178,8 @@ export function CourseManager({
   const prerequisiteOptions = courses
     .filter((c) => c.id !== editTarget)
     .map((c) => ({ value: c.id, label: c.name, code: c.course_code }))
+
+  const programOptions = programs.map((p) => ({ value: p.id, label: p.name, code: p.code }))
 
   return (
     <div>
@@ -231,20 +241,34 @@ export function CourseManager({
           { key: "units", header: "Units" },
           {
             key: "program",
-            header: "Program",
+            header: "Programs",
             render: (row) => {
               const c = row as unknown as CourseRow
-              if (!c.programs) return <span className="text-muted-foreground">All programs</span>
-              return <span>{c.programs.code}</span>
+              if (c.programs.length === 0)
+                return <span className="text-muted-foreground text-xs">All programs</span>
+              return (
+                <div className="flex flex-wrap gap-1">
+                  {c.programs.map((p) => (
+                    <Badge key={p.id} variant="secondary" className="font-mono text-xs">{p.code}</Badge>
+                  ))}
+                </div>
+              )
             },
           },
           {
             key: "prerequisite",
-            header: "Prerequisite",
+            header: "Prerequisites",
             render: (row) => {
               const c = row as unknown as CourseRow
-              if (!c.prerequisite) return <span className="text-muted-foreground">—</span>
-              return <Badge variant="secondary">{c.prerequisite.course_code}</Badge>
+              if (c.prerequisites.length === 0)
+                return <span className="text-muted-foreground">—</span>
+              return (
+                <div className="flex flex-wrap gap-1">
+                  {c.prerequisites.map((p) => (
+                    <Badge key={p.id} variant="secondary">{p.course_code}</Badge>
+                  ))}
+                </div>
+              )
             },
           },
           {
@@ -284,7 +308,7 @@ export function CourseManager({
             <Input
               id="course_code"
               value={form.course_code}
-              onChange={(e) => set("course_code", e.target.value)}
+              onChange={(e) => setForm((p) => ({ ...p, course_code: e.target.value }))}
               placeholder="e.g. CS101"
               required
             />
@@ -294,28 +318,40 @@ export function CourseManager({
             <Input
               id="course_name"
               value={form.name}
-              onChange={(e) => set("name", e.target.value)}
+              onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
               placeholder="e.g. Introduction to Computing"
               required
             />
           </div>
         </div>
         <div className="space-y-2">
-          <Label>Program <span className="text-xs text-muted-foreground font-normal">(optional — leave blank for all programs)</span></Label>
-          <Combobox
-            options={programs.map((p) => ({ value: p.id, label: p.name, code: p.code }))}
-            value={form.program_id}
-            onValueChange={(v) => set("program_id", v)}
+          <Label>Programs <span className="text-xs text-muted-foreground font-normal">(optional — leave blank for all programs)</span></Label>
+          <MultiCombobox
+            options={programOptions}
+            values={form.program_ids}
+            onValuesChange={(v) => setForm((p) => ({ ...p, program_ids: v }))}
             placeholder="All programs"
             searchPlaceholder="Search programs…"
             emptyText="No programs found."
-            clearable
           />
         </div>
         <div className="grid grid-cols-3 gap-4">
           <div className="space-y-2">
+            <Label>Year Level <span className="text-destructive">*</span></Label>
+            <Select value={form.year_level} onValueChange={(v) => setForm((p) => ({ ...p, year_level: v }))}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent position="popper">
+                {[1, 2, 3, 4, 5, 6].map((y) => (
+                  <SelectItem key={y} value={String(y)}>Year {y}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
             <Label>Default Semester <span className="text-destructive">*</span></Label>
-            <Select value={form.semester} onValueChange={(v) => set("semester", v)}>
+            <Select value={form.semester} onValueChange={(v) => setForm((p) => ({ ...p, semester: v }))}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -329,19 +365,6 @@ export function CourseManager({
             </Select>
           </div>
           <div className="space-y-2">
-            <Label>Year Level <span className="text-destructive">*</span></Label>
-            <Select value={form.year_level} onValueChange={(v) => set("year_level", v)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent position="popper">
-                {[1, 2, 3, 4, 5, 6].map((y) => (
-                  <SelectItem key={y} value={String(y)}>Year {y}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
             <Label htmlFor="units">Units <span className="text-destructive">*</span></Label>
             <Input
               id="units"
@@ -349,21 +372,20 @@ export function CourseManager({
               min={1}
               max={9}
               value={form.units}
-              onChange={(e) => set("units", e.target.value)}
+              onChange={(e) => setForm((p) => ({ ...p, units: e.target.value }))}
               required
             />
           </div>
         </div>
         <div className="space-y-2">
-          <Label>Prerequisite Course</Label>
-          <Combobox
+          <Label>Prerequisite Courses</Label>
+          <MultiCombobox
             options={prerequisiteOptions}
-            value={form.prerequisite_course_id}
-            onValueChange={(v) => set("prerequisite_course_id", v)}
-            placeholder="None (no prerequisite)"
+            values={form.prerequisite_course_ids}
+            onValuesChange={(v) => setForm((p) => ({ ...p, prerequisite_course_ids: v }))}
+            placeholder="None (no prerequisites)"
             searchPlaceholder="Search courses…"
             emptyText="No courses found."
-            clearable
           />
         </div>
       </FormModal>

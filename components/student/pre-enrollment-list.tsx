@@ -90,7 +90,7 @@ export function PreEnrollmentList({ classrooms }: Props) {
               {classroom.professor_name && (
                 <p className="text-xs text-muted-foreground">{classroom.professor_name}</p>
               )}
-              {classroom.prerequisite_code && (
+              {classroom.prerequisite_codes.length > 0 && (
                 <div className="flex items-center gap-1.5 text-xs">
                   {classroom.eligible ? (
                     <CheckCircle className="size-3.5 text-green-500" />
@@ -98,7 +98,7 @@ export function PreEnrollmentList({ classrooms }: Props) {
                     <XCircle className="size-3.5 text-destructive" />
                   )}
                   <span className={classroom.eligible ? "text-muted-foreground" : "text-destructive"}>
-                    Prerequisite: {classroom.prerequisite_code}
+                    Prerequisite{classroom.prerequisite_codes.length > 1 ? "s" : ""}: {classroom.prerequisite_codes.join(", ")}
                     {!classroom.eligible && " (not yet passed)"}
                   </span>
                 </div>

@@ -80,15 +80,13 @@ export type Program = {
 
 export type Course = {
   id: string
-  program_id: string | null
   course_code: string
   name: string
   semester: SemesterTerm
   units: number
   year_level: number
-  prerequisite_course_id: string | null
-  programs?: Program
-  prerequisite?: Course | null
+  programs?: { id: string; name: string; code: string }[]
+  prerequisites?: { id: string; course_code: string; name: string }[]
 }
 
 export type Classroom = {
@@ -163,7 +161,7 @@ export type ClassroomWithEligibility = {
   units: number
   year_level: number
   professor_name: string | null
-  prerequisite_code: string | null
+  prerequisite_codes: string[]
   eligible: boolean
   pre_enrolled: boolean
 }
