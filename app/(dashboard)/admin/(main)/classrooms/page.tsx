@@ -11,7 +11,7 @@ export default async function ClassroomsRedirectPage() {
     .limit(1)
     .single()
 
-  if (!year) redirect("/admin/academic-years")
+  if (!year) redirect("/admin")
 
   const { data: semester } = await supabase
     .from("semesters")

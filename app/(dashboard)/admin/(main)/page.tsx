@@ -1,35 +1,23 @@
-import { redirect } from "next/navigation"
 import { getSupabaseServerClient } from "@/lib/supabase/server"
+import { PageHeader } from "@/components/shared/page-header"
+import { AcademicYearManager } from "@/components/admin/academic-year-manager"
 
-export default async function AdminDashboard() {
+export default async function AdminHomePage() {
   const supabase = await getSupabaseServerClient()
+  const [{ data: years }, { data: semesterRows }] = await Promise.all([
+    supabase.from("academic_years").select("*").order("created_at", { ascending: false }),
+    supabase.from("semesters").select("academic_year_id"),
+  ])
 
-  const { data: years } = await supabase
-    .from("academic_years")
-    .select("id, status")
-    .not("status", "eq", "ended")
-    .order("created_at", { ascending: false })
-    .limit(10)
+  const semesterCounts: Record<string, number> = {}
+  for (const s of semesterRows ?? []) {
+    semesterCounts[s.academic_year_id] = (semesterCounts[s.academic_year_id] ?? 0) + 1
+  }
 
-  const year =
-    years?.find((y) => y.status === "active") ??
-    years?.find((y) => y.status === "upcoming") ??
-    years?.[0]
-
-  if (!year) redirect("/admin/academic-years")
-
-  const { data: semesters } = await supabase
-    .from("semesters")
-    .select("id, status")
-    .eq("academic_year_id", year.id)
-    .not("status", "eq", "ended")
-    .order("created_at", { ascending: true })
-
-  const sem =
-    semesters?.find((s) => s.status === "active") ??
-    semesters?.find((s) => s.status === "pre_enrollment") ??
-    semesters?.[0]
-
-  if (sem) redirect(`/admin/${year.id}/${sem.id}`)
-  redirect(`/admin/${year.id}`)
+  return (
+    <div>
+      <PageHeader title="Academic Years" description="Select an academic year to manage its semesters and courses" />
+      <AcademicYearManager years={years ?? []} semesterCounts={semesterCounts} />
+    </div>
+  )
 }

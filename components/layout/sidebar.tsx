@@ -6,6 +6,7 @@ import { useRef, useState, useEffect } from "react"
 import { cn } from "@/lib/utils"
 import type { UserRole } from "@/types"
 import {
+  Home,
   LayoutDashboard,
   Users,
   BookOpen,
@@ -53,7 +54,7 @@ function isGroup(s: NavSection): s is NavGroup {
 
 const NAV_ITEMS: Record<UserRole, NavSection[]> = {
   admin: [
-    { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
+    { label: "Home", href: "/admin", icon: Home },
     { label: "User Accounts", href: "/admin/users", icon: Users },
     {
       groupLabel: "Academics",
@@ -91,8 +92,9 @@ const YEAR_SCOPED_ITEMS = [
 ]
 
 const SEMESTER_SCOPED_ITEMS = [
-  { label: "Classrooms", icon: Layers },
-  { label: "Grade Management", icon: Star },
+  { label: "Semester Overview", hrefSuffix: "", icon: LayoutDashboard, exactMatch: true },
+  { label: "Classrooms", hrefSuffix: "/classrooms", icon: Layers, exactMatch: false },
+  { label: "Grade Management", hrefSuffix: "/grades", icon: Star, exactMatch: false },
 ]
 
 function SidebarSectionLabel({ label, expanded }: { label: string; expanded: boolean }) {
@@ -178,7 +180,12 @@ export function Sidebar({ role }: { role: UserRole }) {
   if (years.length === 0) return null
 
   const items = NAV_ITEMS[role]
-  const showAcademics = pathname.startsWith("/admin/academic")
+  const showTopLevel =
+    pathname === "/admin" ||
+    pathname === "/admin/users" ||
+    pathname.startsWith("/admin/academic")
+  const showAcademics = showTopLevel
+  const showUserAccounts = showTopLevel
 
   function renderNavItem(item: NavItem) {
     const Icon = item.icon
@@ -244,6 +251,7 @@ export function Sidebar({ role }: { role: UserRole }) {
               </div>
             )
           }
+          if (!isGroup(section) && section.label === "User Accounts" && !showUserAccounts) return null
           return renderNavItem(section)
         })}
 
@@ -293,11 +301,9 @@ export function Sidebar({ role }: { role: UserRole }) {
               expanded={expanded}
             />
             {SEMESTER_SCOPED_ITEMS.map((item) => {
-              const href = item.label === "Classrooms"
-                ? `/admin/${currentYearId}/${currentSemesterId}/classrooms`
-                : `/admin/${currentYearId}/${currentSemesterId}/grades`
+              const href = `/admin/${currentYearId}/${currentSemesterId}${item.hrefSuffix}`
               const Icon = item.icon
-              const isActive = pathname.startsWith(href)
+              const isActive = item.exactMatch ? pathname === href : pathname.startsWith(href)
               const linkContent = (
                 <Link
                   key={href}

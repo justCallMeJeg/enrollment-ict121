@@ -12,5 +12,5 @@ export default async function CoursesRedirectPage() {
     .single()
 
   if (year) redirect(`/admin/${year.id}/courses`)
-  redirect("/admin/academic-years")
+  redirect("/admin")
 }

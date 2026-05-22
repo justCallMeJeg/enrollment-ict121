@@ -104,7 +104,7 @@ function YearCombobox({
       </div>
       <DropdownMenuSeparator />
       <DropdownMenuItem asChild className="px-3 py-2 cursor-pointer">
-        <Link href="/admin/academic-years/new" onClick={() => setOpen(false)}>
+        <Link href="/admin/new" onClick={() => setOpen(false)}>
           <Plus className="size-3.5 mr-2 shrink-0" />
           <span className="text-sm">Create New Academic Year</span>
         </Link>
@@ -123,7 +123,7 @@ function YearCombobox({
       {currentYear ? (
         <div className="flex items-center">
           <Link
-            href="/admin/academic-years"
+            href="/admin"
             className="text-sm font-medium hover:text-primary transition-colors"
           >
             Academic Year {currentYear.label}
@@ -135,12 +135,9 @@ function YearCombobox({
           </DropdownMenuTrigger>
         </div>
       ) : (
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="sm" className="text-muted-foreground font-medium">
-            Select Year
-            <ChevronsUpDown className="size-3.5" />
-          </Button>
-        </DropdownMenuTrigger>
+        <Link href="/admin" className="text-sm font-medium hover:text-primary transition-colors">
+          Home
+        </Link>
       )}
       {dropdownContent}
     </DropdownMenu>
@@ -228,10 +225,10 @@ export function ContextBreadcrumb() {
   if (years.length === 0) {
     return (
       <Link
-        href="/admin/academic-years"
+        href="/admin"
         className="text-sm font-medium hover:text-primary transition-colors"
       >
-        Academic Years
+        Home
       </Link>
     )
   }

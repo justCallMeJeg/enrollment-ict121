@@ -42,11 +42,11 @@ export default function YearDashboardPage() {
     <div>
       <div className="mb-1">
         <Link
-          href="/admin/academic-years"
+          href="/admin"
           className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
         >
           <ChevronLeft className="size-3" />
-          Academic Years
+          Home
         </Link>
       </div>
 

@@ -1,6 +1,7 @@
 "use client"
 
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
   DropdownMenu,
@@ -39,7 +40,9 @@ export function Header({
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 h-14 border-b bg-background flex items-center px-4 gap-2">
-      <GraduationCap className="size-5 text-primary shrink-0" />
+      <Link href="/admin" className="shrink-0">
+        <GraduationCap className="size-5 text-primary" />
+      </Link>
       {breadcrumb && (
         <>
           <span className="text-muted-foreground/40 text-sm select-none">/</span>

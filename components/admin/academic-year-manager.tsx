@@ -175,7 +175,7 @@ export function AcademicYearManager({
         <div className="flex-1" />
 
         <Button size="sm" asChild>
-          <Link href="/admin/academic-years/new">
+          <Link href="/admin/new">
             <Plus className="size-4 mr-2" />
             Add Academic Year
           </Link>
