@@ -62,8 +62,15 @@ export function AdminYearContextProvider({ children }: { children: React.ReactNo
   )
 }
 
+const EMPTY_STATE: AdminYearState = {
+  years: [],
+  semesters: [],
+  currentYearId: null,
+  currentSemesterId: null,
+  selectYear: () => {},
+  selectSemester: () => {},
+}
+
 export function useAdminYearContext(): AdminYearState {
-  const ctx = useContext(Ctx)
-  if (!ctx) throw new Error("useAdminYearContext must be used within AdminYearContextProvider")
-  return ctx
+  return useContext(Ctx) ?? EMPTY_STATE
 }
