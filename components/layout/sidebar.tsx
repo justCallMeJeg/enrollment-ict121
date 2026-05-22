@@ -88,7 +88,8 @@ const DISPLAY_OPTIONS: { label: string; value: DisplayMode }[] = [
 ]
 
 const YEAR_SCOPED_ITEMS = [
-  { label: "Courses", icon: BookOpen },
+  { label: "Dashboard", hrefSuffix: "", icon: LayoutDashboard, exactMatch: true },
+  { label: "Courses", hrefSuffix: "/courses", icon: BookOpen, exactMatch: false },
 ]
 
 const SEMESTER_SCOPED_ITEMS = [
@@ -251,6 +252,7 @@ export function Sidebar({ role }: { role: UserRole }) {
               </div>
             )
           }
+          if (!isGroup(section) && section.label === "Home" && currentYearId) return null
           if (!isGroup(section) && section.label === "User Accounts" && !showUserAccounts) return null
           return renderNavItem(section)
         })}
@@ -260,9 +262,9 @@ export function Sidebar({ role }: { role: UserRole }) {
           <>
             <SidebarSectionLabel label={currentYear?.label ?? "Academic Year"} expanded={expanded} />
             {YEAR_SCOPED_ITEMS.map((item) => {
-              const href = `/admin/${currentYearId}/courses`
+              const href = `/admin/${currentYearId}${item.hrefSuffix}`
               const Icon = item.icon
-              const isActive = pathname.startsWith(href)
+              const isActive = item.exactMatch ? pathname === href : pathname.startsWith(href)
               const linkContent = (
                 <Link
                   key={href}

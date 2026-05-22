@@ -123,7 +123,7 @@ function YearCombobox({
       {currentYear ? (
         <div className="flex items-center">
           <Link
-            href="/admin"
+            href={`/admin/${currentYearId}`}
             className="text-sm font-medium hover:text-primary transition-colors"
           >
             Academic Year {currentYear.label}
