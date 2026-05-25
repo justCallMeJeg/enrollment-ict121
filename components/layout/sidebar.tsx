@@ -14,7 +14,6 @@ import {
   ClipboardList,
   School,
   Building2,
-  BookMarked,
   PanelLeft,
   Check,
   UserCircle,
@@ -73,7 +72,6 @@ const NAV_ITEMS: Record<UserRole, NavSection[]> = {
   ],
   student: [
     { label: "Dashboard", href: "/student", icon: LayoutDashboard },
-    { label: "Pre-Enrollment", href: "/student/pre-enrollment", icon: BookMarked },
     { label: "My Courses", href: "/student/courses", icon: BookOpen },
     { label: "My Grades", href: "/student/grades", icon: GraduationCap },
     { label: "Profile", href: "/student/profile", icon: UserCircle },

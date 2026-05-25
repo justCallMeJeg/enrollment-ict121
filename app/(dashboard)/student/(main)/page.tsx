@@ -178,8 +178,8 @@ export default async function StudentDashboard() {
             </p>
           </div>
           <Button asChild size="sm" variant={hasPreEnrolled ? "outline" : "default"}>
-            <Link href="/student/pre-enrollment">
-              {hasPreEnrolled ? "View Selection" : "Start Pre-Enrollment"}
+            <Link href={hasPreEnrolled ? "/student/courses" : "/student/pre-enrollment"}>
+              {hasPreEnrolled ? "View My Courses" : "Start Pre-Enrollment"}
             </Link>
           </Button>
         </div>

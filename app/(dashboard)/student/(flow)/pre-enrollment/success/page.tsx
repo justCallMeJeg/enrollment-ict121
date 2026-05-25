@@ -91,7 +91,7 @@ export default async function PreEnrollmentSuccessPage() {
   const periodLabel = [semLabel, yearLabel].filter(Boolean).join(" — ")
 
   return (
-    <div className="max-w-2xl mx-auto py-10 space-y-8">
+    <div className="py-10 space-y-8">
       {/* Success header */}
       <div className="flex flex-col items-center text-center gap-3">
         <div className="rounded-full bg-green-100 dark:bg-green-900/30 p-4">
