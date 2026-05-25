@@ -55,20 +55,7 @@ const STATUS_OPTIONS = [
 const SORT_OPTIONS = [
   { label: "Course Code", value: "course_code" },
   { label: "Course Name", value: "course_name" },
-  { label: "Grade", value: "grade" },
 ]
-
-function gradeColor(grade: number | null) {
-  if (grade === null) return "text-muted-foreground"
-  if (grade <= 3.0) return "text-green-600 dark:text-green-400"
-  return "text-destructive"
-}
-
-function formatGrade(grade: number | null, remarks: string | null) {
-  if (remarks === "INC") return "INC"
-  if (grade !== null) return grade.toFixed(2)
-  return "—"
-}
 
 export function CoursesList({ rows, defaultYearId }: Props) {
   const router = useRouter()
@@ -112,7 +99,7 @@ export function CoursesList({ rows, defaultYearId }: Props) {
       let av: string | number = a.course_code
       let bv: string | number = b.course_code
       if (sortBy === "course_name") { av = a.course_name; bv = b.course_name }
-      if (sortBy === "grade") { av = a.grade ?? 999; bv = b.grade ?? 999 }
+    
       if (av < bv) return sortDir === "asc" ? -1 : 1
       if (av > bv) return sortDir === "asc" ? 1 : -1
       return 0
@@ -198,8 +185,6 @@ export function CoursesList({ rows, defaultYearId }: Props) {
                       <TableHead>Units</TableHead>
                       <TableHead>Section</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead>Grade</TableHead>
-                      <TableHead>Remarks</TableHead>
                       <TableHead className="w-10" />
                     </TableRow>
                   </TableHeader>
@@ -224,29 +209,6 @@ export function CoursesList({ rows, defaultYearId }: Props) {
                           >
                             {row.type === "pre_enrolled" ? "Pre-Enrolled" : row.status === "dropped" ? "Dropped" : "Enrolled"}
                           </Badge>
-                        </TableCell>
-                        <TableCell className={gradeColor(row.grade)}>
-                          {formatGrade(row.grade, row.remarks)}
-                        </TableCell>
-                        <TableCell>
-                          {row.remarks && row.remarks !== "INC" ? (
-                            <Badge
-                              variant={
-                                row.remarks === "Passed"
-                                  ? "default"
-                                  : row.remarks === "Failed" || row.remarks === "Dropped"
-                                  ? "destructive"
-                                  : "secondary"
-                              }
-                              className="text-xs"
-                            >
-                              {row.remarks}
-                            </Badge>
-                          ) : row.remarks === "INC" ? (
-                            <Badge variant="secondary" className="text-xs">INC</Badge>
-                          ) : (
-                            <span className="text-muted-foreground text-sm">—</span>
-                          )}
                         </TableCell>
                         <TableCell>
                           {row.canDrop && (

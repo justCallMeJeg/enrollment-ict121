@@ -161,7 +161,7 @@ export default async function PreEnrollmentPage() {
         title="Pre-Enrollment"
         description={`Select courses for ${upcomingYear.label}`}
       />
-      <PreEnrollmentList classrooms={classroomsWithEligibility} />
+      <PreEnrollmentList classrooms={classroomsWithEligibility} yearLabel={upcomingYear.label} />
     </div>
   )
 }

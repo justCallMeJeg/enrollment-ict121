@@ -76,6 +76,7 @@ const NAV_ITEMS: Record<UserRole, NavSection[]> = {
     { label: "Dashboard", href: "/student", icon: LayoutDashboard },
     { label: "Pre-Enrollment", href: "/student/pre-enrollment", icon: BookMarked },
     { label: "My Courses", href: "/student/courses", icon: BookOpen },
+    { label: "My Grades", href: "/student/grades", icon: GraduationCap },
     { label: "Profile", href: "/student/profile", icon: UserCircle },
   ],
 }
@@ -179,7 +180,7 @@ export function Sidebar({ role }: { role: UserRole }) {
     }
   }
 
-  if (years.length === 0) return null
+  if (role === "admin" && years.length === 0) return null
 
   const items = NAV_ITEMS[role]
   const showTopLevel =
