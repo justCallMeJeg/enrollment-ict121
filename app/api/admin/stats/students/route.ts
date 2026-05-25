@@ -17,7 +17,6 @@ type ProgramShape = {
 }
 
 type StudentShape = {
-  id: string
   year_level: number
   programs: ProgramShape | ProgramShape[] | null
 }
@@ -60,7 +59,7 @@ export async function GET(request: NextRequest) {
     .select(`
       student_id,
       students!inner(
-        id, year_level,
+        year_level,
         programs!program_id(
           id, name, code,
           departments!department_id(
