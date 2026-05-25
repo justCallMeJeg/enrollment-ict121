@@ -14,11 +14,16 @@ export async function PATCH(
   const { enrollmentId } = await params
   const { grade, remarks } = await request.json()
 
-  if (grade === undefined || isNaN(grade) || grade < 1 || grade > 5) {
-    return NextResponse.json(
-      { error: "Grade must be between 1.00 and 5.00" },
-      { status: 400 }
-    )
+  // INC declaration: remarks = "Incomplete" with no grade
+  const isIncDeclaration = remarks === "Incomplete" && grade === undefined
+
+  if (!isIncDeclaration) {
+    if (typeof grade !== "number" || isNaN(grade) || grade < 1 || grade > 5) {
+      return NextResponse.json(
+        { error: "Grade must be between 1.00 and 5.00" },
+        { status: 400 }
+      )
+    }
   }
 
   const supabase = await getSupabaseServerClient()
@@ -43,7 +48,11 @@ export async function PATCH(
   const { error } = await supabase
     .from("grades")
     .upsert(
-      { enrollment_id: enrollmentId, grade, remarks: remarks ?? null },
+      {
+        enrollment_id: enrollmentId,
+        grade: isIncDeclaration ? null : grade,
+        remarks: isIncDeclaration ? "Incomplete" : (remarks ?? null),
+      },
       { onConflict: "enrollment_id" }
     )
 

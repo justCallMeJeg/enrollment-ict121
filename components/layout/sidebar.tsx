@@ -11,13 +11,11 @@ import {
   Users,
   BookOpen,
   GraduationCap,
-  ClipboardList,
   School,
   Building2,
   PanelLeft,
   Check,
   UserCircle,
-  Star,
   CalendarDays,
 } from "lucide-react"
 import { useSidebar } from "./sidebar-context"
@@ -68,8 +66,7 @@ const NAV_ITEMS: Record<UserRole, NavSection[]> = {
   ],
   professor: [
     { label: "Dashboard", href: "/professor", icon: LayoutDashboard },
-    { label: "Pre-Enrollments", href: "/professor/pre-enrollments", icon: ClipboardList },
-    { label: "Grade Management", href: "/professor/grades", icon: Star },
+    { label: "Classrooms", href: "/professor/classrooms", icon: School },
   ],
   student: [
     { label: "Dashboard", href: "/student", icon: LayoutDashboard },
