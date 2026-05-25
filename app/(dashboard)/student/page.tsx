@@ -25,7 +25,6 @@ export default async function StudentDashboard() {
 
   const [
     { data: student },
-    { data: activeYear },
     { data: activeSemester },
     { data: preEnrollSemester },
     { count: preEnrollCount },
@@ -37,13 +36,8 @@ export default async function StudentDashboard() {
       .eq("user_id", userId)
       .single(),
     supabase
-      .from("academic_years")
-      .select("id, label")
-      .eq("status", "active")
-      .maybeSingle(),
-    supabase
       .from("semesters")
-      .select("id, term")
+      .select("id, term, academic_years!inner(id, label)")
       .eq("status", "active")
       .maybeSingle(),
     supabase
@@ -82,7 +76,10 @@ export default async function StudentDashboard() {
       ? `${program.code}-${student.year_level}${student.section}`
       : student?.section ?? "—"
 
-  const activeYearLabel = activeYear?.label ?? "—"
+  const activeYearData = activeSemester?.academic_years
+    ? Array.isArray(activeSemester.academic_years) ? activeSemester.academic_years[0] : activeSemester.academic_years
+    : null
+  const activeYearLabel = (activeYearData as { label: string } | null)?.label ?? "—"
   const activeSemLabel = activeSemester?.term
     ? semesterLabel(activeSemester.term as SemesterTerm)
     : null
