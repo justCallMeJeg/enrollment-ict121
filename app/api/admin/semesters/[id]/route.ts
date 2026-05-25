@@ -36,6 +36,41 @@ export async function PATCH(
     )
   }
 
+  // When activating a semester, convert all pending pre-enrollments to enrollments
+  if (existing.status === "pre_enrollment" && status === "active") {
+    const { data: classrooms } = await supabase
+      .from("classrooms")
+      .select("id")
+      .eq("semester_id", id)
+
+    const classroomIds = (classrooms ?? []).map((c) => c.id)
+
+    if (classroomIds.length > 0) {
+      const { data: preEnrollments } = await supabase
+        .from("pre_enrollments")
+        .select("student_id, classroom_id")
+        .eq("status", "pending")
+        .in("classroom_id", classroomIds)
+
+      if (preEnrollments && preEnrollments.length > 0) {
+        const { error: enrollError } = await supabase
+          .from("enrollments")
+          .upsert(
+            preEnrollments.map((pe) => ({
+              student_id: pe.student_id,
+              classroom_id: pe.classroom_id,
+              status: "enrolled",
+            })),
+            { onConflict: "student_id,classroom_id", ignoreDuplicates: true }
+          )
+
+        if (enrollError) {
+          return NextResponse.json({ error: enrollError.message }, { status: 500 })
+        }
+      }
+    }
+  }
+
   const { data, error } = await supabase
     .from("semesters")
     .update({ status })
