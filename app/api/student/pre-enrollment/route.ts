@@ -15,10 +15,10 @@ export async function POST(request: NextRequest) {
 
   const supabase = await getSupabaseServerClient()
 
-  // Verify the classroom is in an upcoming academic year
+  // Verify the classroom belongs to a semester currently in pre_enrollment status
   const { data: classroom } = await supabase
     .from("classrooms")
-    .select("id, semesters(academic_years(status))")
+    .select("id, semesters(status)")
     .eq("id", classroom_id)
     .single()
 
@@ -29,13 +29,10 @@ export async function POST(request: NextRequest) {
   const sem = classroom.semesters
     ? Array.isArray(classroom.semesters) ? classroom.semesters[0] : classroom.semesters
     : null
-  const year = sem?.academic_years
-    ? Array.isArray(sem.academic_years) ? sem.academic_years[0] : sem.academic_years
-    : null
 
-  if (!year || (year as { status: string }).status !== "upcoming") {
+  if (!sem || (sem as { status: string }).status !== "pre_enrollment") {
     return NextResponse.json(
-      { error: "Pre-enrollment is only available for upcoming years" },
+      { error: "Pre-enrollment is not currently open for this semester" },
       { status: 400 }
     )
   }

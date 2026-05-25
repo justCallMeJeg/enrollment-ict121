@@ -11,26 +11,31 @@ export default async function PreEnrollmentPage() {
 
   const supabase = await getSupabaseServerClient()
 
-  const { data: upcomingYear } = await supabase
-    .from("academic_years")
-    .select("id, label")
-    .eq("status", "upcoming")
-    .single()
+  const { data: preEnrollSemester } = await supabase
+    .from("semesters")
+    .select("id, academic_year_id, academic_years!inner(id, label)")
+    .eq("status", "pre_enrollment")
+    .maybeSingle()
 
-  if (!upcomingYear) {
+  if (!preEnrollSemester) {
     return (
       <div>
         <PageHeader
           title="Pre-Enrollment"
-          description="Select courses for the upcoming academic year"
+          description="Select courses for the upcoming semester"
         />
         <EmptyState
-          title="No upcoming academic year"
-          description="Pre-enrollment is only available when an upcoming academic year has been set up by the admin."
+          title="Pre-enrollment is not open"
+          description="Pre-enrollment is only available when the admin has opened the pre-enrollment period for an upcoming semester."
         />
       </div>
     )
   }
+
+  const yearData = Array.isArray(preEnrollSemester.academic_years)
+    ? preEnrollSemester.academic_years[0]
+    : preEnrollSemester.academic_years
+  const upcomingYear = { id: preEnrollSemester.academic_year_id, label: yearData?.label ?? "" }
 
   const { data: student } = await supabase
     .from("students")
@@ -42,7 +47,7 @@ export default async function PreEnrollmentPage() {
     return <EmptyState title="Student profile not found" />
   }
 
-  // Fetch classrooms for the upcoming year — filter directly by classroom's program/year_level
+  // Fetch classrooms for the pre-enrollment semester — filter directly by classroom's program/year_level
   const { data: classrooms } = await supabase
     .from("classrooms")
     .select(`
@@ -55,10 +60,9 @@ export default async function PreEnrollmentPage() {
         )
       ),
       professors!professor_id(faculty_id, users!user_id(name)),
-      semesters!semester_id!inner(academic_year_id),
       programs!program_id(code)
     `)
-    .eq("semesters.academic_year_id", upcomingYear.id)
+    .eq("semester_id", preEnrollSemester.id)
     .eq("program_id", student.program_id)
     .eq("year_level", student.year_level)
     .order("created_at")

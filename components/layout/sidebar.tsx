@@ -19,6 +19,7 @@ import {
   PanelLeft,
   Check,
   Layers,
+  UserCircle,
 } from "lucide-react"
 import { useSidebar } from "./sidebar-context"
 import { useAdminYearContext } from "./admin-year-context"
@@ -74,8 +75,8 @@ const NAV_ITEMS: Record<UserRole, NavSection[]> = {
   student: [
     { label: "Dashboard", href: "/student", icon: LayoutDashboard },
     { label: "Pre-Enrollment", href: "/student/pre-enrollment", icon: BookMarked },
-    { label: "Drop Course", href: "/student/drop", icon: BookOpen },
-    { label: "My Grades", href: "/student/grades", icon: Star },
+    { label: "My Courses", href: "/student/courses", icon: BookOpen },
+    { label: "Profile", href: "/student/profile", icon: UserCircle },
   ],
 }
 

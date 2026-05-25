@@ -112,21 +112,42 @@ CREATE INDEX IF NOT EXISTS idx_semesters_academic_year_id ON public.semesters (a
 -- courses  (global catalog — canonical course definitions, not year-specific)
 -- -----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.courses (
-  id                     uuid    PRIMARY KEY DEFAULT gen_random_uuid(),
-  program_id             uuid    REFERENCES public.programs(id) ON DELETE SET NULL,
-  course_code            text    NOT NULL UNIQUE,
-  name                   text    NOT NULL,
-  semester               text    NOT NULL CHECK (semester IN ('1st', '2nd', 'midyear')),
-  units                  integer NOT NULL DEFAULT 3,
-  year_level             integer NOT NULL DEFAULT 1,
-  prerequisite_course_id uuid    REFERENCES public.courses(id) ON DELETE SET NULL,
-  created_at             timestamptz NOT NULL DEFAULT now()
+  id          uuid    PRIMARY KEY DEFAULT gen_random_uuid(),
+  course_code text    NOT NULL UNIQUE,
+  name        text    NOT NULL,
+  semester    text    NOT NULL CHECK (semester IN ('1st', '2nd', 'midyear')),
+  units       integer NOT NULL DEFAULT 3,
+  year_level  integer NOT NULL DEFAULT 1,
+  created_at  timestamptz NOT NULL DEFAULT now()
 );
 ALTER TABLE public.courses DISABLE ROW LEVEL SECURITY;
-CREATE INDEX IF NOT EXISTS idx_courses_program_id ON public.courses (program_id);
 
 -- -----------------------------------------------------------------------------
--- classrooms  (teaching instances: course + academic year + semester + professor + section)
+-- course_programs  (many-to-many: a course may belong to multiple programs)
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.course_programs (
+  course_id  uuid NOT NULL REFERENCES public.courses(id)  ON DELETE CASCADE,
+  program_id uuid NOT NULL REFERENCES public.programs(id) ON DELETE CASCADE,
+  PRIMARY KEY (course_id, program_id)
+);
+ALTER TABLE public.course_programs DISABLE ROW LEVEL SECURITY;
+CREATE INDEX IF NOT EXISTS idx_course_programs_course_id   ON public.course_programs (course_id);
+CREATE INDEX IF NOT EXISTS idx_course_programs_program_id  ON public.course_programs (program_id);
+
+-- -----------------------------------------------------------------------------
+-- course_prerequisites  (many-to-many: a course may require multiple courses)
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.course_prerequisites (
+  course_id              uuid NOT NULL REFERENCES public.courses(id) ON DELETE CASCADE,
+  prerequisite_course_id uuid NOT NULL REFERENCES public.courses(id) ON DELETE CASCADE,
+  PRIMARY KEY (course_id, prerequisite_course_id),
+  CHECK (course_id != prerequisite_course_id)
+);
+ALTER TABLE public.course_prerequisites DISABLE ROW LEVEL SECURITY;
+CREATE INDEX IF NOT EXISTS idx_course_prerequisites_course_id ON public.course_prerequisites (course_id);
+
+-- -----------------------------------------------------------------------------
+-- classrooms  (teaching instances: course + semester + program + year level + section)
 -- -----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.classrooms (
   id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -134,15 +155,18 @@ CREATE TABLE IF NOT EXISTS public.classrooms (
   academic_year_id uuid NOT NULL REFERENCES public.academic_years(id) ON DELETE CASCADE,
   semester_id      uuid NOT NULL REFERENCES public.semesters(id)      ON DELETE CASCADE,
   professor_id     uuid REFERENCES public.professors(user_id)         ON DELETE SET NULL,
+  program_id       uuid NOT NULL REFERENCES public.programs(id)       ON DELETE CASCADE,
+  year_level       integer NOT NULL DEFAULT 1,
   section          text NOT NULL,
   created_at       timestamptz NOT NULL DEFAULT now(),
-  UNIQUE (course_id, semester_id, section)
+  UNIQUE (course_id, semester_id, program_id, year_level, section)
 );
 ALTER TABLE public.classrooms DISABLE ROW LEVEL SECURITY;
 CREATE INDEX IF NOT EXISTS idx_classrooms_course_id        ON public.classrooms (course_id);
 CREATE INDEX IF NOT EXISTS idx_classrooms_academic_year_id ON public.classrooms (academic_year_id);
 CREATE INDEX IF NOT EXISTS idx_classrooms_semester_id      ON public.classrooms (semester_id);
 CREATE INDEX IF NOT EXISTS idx_classrooms_professor_id     ON public.classrooms (professor_id);
+CREATE INDEX IF NOT EXISTS idx_classrooms_program_id       ON public.classrooms (program_id);
 
 -- -----------------------------------------------------------------------------
 -- pre_enrollments  (student expresses interest in a classroom before activation)
