@@ -20,7 +20,7 @@ export default async function AdminCreateLayout({
         user={user}
         breadcrumb={
           <span className="text-sm font-medium text-muted-foreground">
-            New Academic Year
+            Creating New Academic Year
           </span>
         }
       />

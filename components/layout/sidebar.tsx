@@ -177,7 +177,6 @@ export function Sidebar({ role }: { role: UserRole }) {
     }
   }
 
-  if (role === "admin" && years.length === 0) return null
 
   const items = NAV_ITEMS[role]
   const showTopLevel =

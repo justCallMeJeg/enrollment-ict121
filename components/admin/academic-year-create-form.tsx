@@ -7,8 +7,26 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
-import { ArrowLeft, Calendar } from "lucide-react"
+import { ArrowLeft, Calendar, CheckCircle2, Circle, AlertCircle } from "lucide-react"
 import Link from "next/link"
+
+export type PrerequisiteChecks = {
+  students: boolean
+  professors: boolean
+  colleges: boolean
+  departments: boolean
+  programs: boolean
+  courses: boolean
+}
+
+const PREREQUISITE_ITEMS: { label: string; key: keyof PrerequisiteChecks; href: string }[] = [
+  { label: "Student Account", key: "students", href: "/admin/users" },
+  { label: "Professor Account", key: "professors", href: "/admin/users" },
+  { label: "College", key: "colleges", href: "/admin/academic/colleges" },
+  { label: "Department", key: "departments", href: "/admin/academic/departments" },
+  { label: "Program", key: "programs", href: "/admin/academic/programs" },
+  { label: "Course", key: "courses", href: "/admin/academic/courses" },
+]
 
 function deriveLabel(startYear: string): string {
   const sy = parseInt(startYear)
@@ -16,12 +34,15 @@ function deriveLabel(startYear: string): string {
   return `${sy}-${sy + 1}`
 }
 
-export function AcademicYearCreateForm() {
+export function AcademicYearCreateForm({ checks }: { checks?: PrerequisiteChecks }) {
   const router = useRouter()
   const [startYear, setStartYear] = useState(String(new Date().getFullYear()))
   const [loading, setLoading] = useState(false)
 
   const derivedLabel = deriveLabel(startYear)
+  const allMet = checks ? Object.values(checks).every(Boolean) : true
+  const metCount = checks ? Object.values(checks).filter(Boolean).length : 0
+  const totalCount = PREREQUISITE_ITEMS.length
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -54,6 +75,63 @@ export function AcademicYearCreateForm() {
         <ArrowLeft className="size-3.5" />
         Back to Dashboard
       </Link>
+
+      {/* Prerequisites checklist */}
+      {checks && (
+        <div className="rounded-lg border bg-card p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <p className="text-sm font-semibold">Setup Checklist</p>
+              <p className="text-xs text-muted-foreground">
+                Before creating an academic year, ensure the following are set up.
+              </p>
+            </div>
+            <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+              allMet
+                ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+            }`}>
+              {metCount}/{totalCount}
+            </span>
+          </div>
+
+          <div className="space-y-2.5">
+            {PREREQUISITE_ITEMS.map(({ label, key, href }) => {
+              const met = checks[key]
+              return (
+                <div key={key} className="flex items-center gap-3">
+                  {met ? (
+                    <CheckCircle2 className="size-4 text-green-500 shrink-0" />
+                  ) : (
+                    <Circle className="size-4 text-muted-foreground/40 shrink-0" />
+                  )}
+                  <span className={`text-sm flex-1 ${met ? "text-foreground" : "text-muted-foreground"}`}>
+                    At least 1 {label}
+                  </span>
+                  {!met && (
+                    <Link
+                      href={href}
+                      className="text-xs text-primary hover:underline shrink-0"
+                    >
+                      Set up →
+                    </Link>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+
+          {!allMet && (
+            <div className="flex items-start gap-2 pt-1 border-t text-xs text-amber-600 dark:text-amber-400">
+              <AlertCircle className="size-3.5 mt-0.5 shrink-0" />
+              <span>
+                You can still create the academic year, but students won&apos;t be able to
+                enroll until all items above are configured.
+              </span>
+            </div>
+          )}
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="rounded-lg border bg-card p-6 space-y-4">
