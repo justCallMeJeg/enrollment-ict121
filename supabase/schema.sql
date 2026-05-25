@@ -169,30 +169,14 @@ CREATE INDEX IF NOT EXISTS idx_classrooms_professor_id     ON public.classrooms 
 CREATE INDEX IF NOT EXISTS idx_classrooms_program_id       ON public.classrooms (program_id);
 
 -- -----------------------------------------------------------------------------
--- pre_enrollments  (student expresses interest in a classroom before activation)
--- -----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS public.pre_enrollments (
-  id           uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
-  student_id   uuid        NOT NULL REFERENCES public.students(user_id) ON DELETE CASCADE,
-  classroom_id uuid        NOT NULL REFERENCES public.classrooms(id)    ON DELETE CASCADE,
-  status       text        NOT NULL DEFAULT 'pending'
-                           CHECK (status IN ('pending', 'dropped')),
-  created_at   timestamptz NOT NULL DEFAULT now(),
-  UNIQUE (student_id, classroom_id)
-);
-ALTER TABLE public.pre_enrollments DISABLE ROW LEVEL SECURITY;
-CREATE INDEX IF NOT EXISTS idx_pre_enrollments_student_id   ON public.pre_enrollments (student_id);
-CREATE INDEX IF NOT EXISTS idx_pre_enrollments_classroom_id ON public.pre_enrollments (classroom_id);
-
--- -----------------------------------------------------------------------------
--- enrollments  (confirmed: student enrolled in a specific classroom/section)
+-- enrollments  (unified: pre_enrolled → enrolled → dropped lifecycle)
 -- -----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.enrollments (
   id           uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
   student_id   uuid        NOT NULL REFERENCES public.students(user_id) ON DELETE CASCADE,
   classroom_id uuid        NOT NULL REFERENCES public.classrooms(id)    ON DELETE CASCADE,
-  status       text        NOT NULL DEFAULT 'enrolled'
-                           CHECK (status IN ('enrolled', 'dropped')),
+  status       text        NOT NULL DEFAULT 'pre_enrolled'
+                           CHECK (status IN ('pre_enrolled', 'enrolled', 'dropped')),
   created_at   timestamptz NOT NULL DEFAULT now(),
   UNIQUE (student_id, classroom_id)
 );

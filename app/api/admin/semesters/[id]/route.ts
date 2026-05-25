@@ -36,7 +36,7 @@ export async function PATCH(
     )
   }
 
-  // When activating a semester, convert all pending pre-enrollments to enrollments
+  // When activating a semester, promote all pre_enrolled rows to enrolled
   if (existing.status === "pre_enrollment" && status === "active") {
     const { data: classrooms } = await supabase
       .from("classrooms")
@@ -46,27 +46,14 @@ export async function PATCH(
     const classroomIds = (classrooms ?? []).map((c) => c.id)
 
     if (classroomIds.length > 0) {
-      const { data: preEnrollments } = await supabase
-        .from("pre_enrollments")
-        .select("student_id, classroom_id")
-        .eq("status", "pending")
+      const { error: promoteError } = await supabase
+        .from("enrollments")
+        .update({ status: "enrolled" })
+        .eq("status", "pre_enrolled")
         .in("classroom_id", classroomIds)
 
-      if (preEnrollments && preEnrollments.length > 0) {
-        const { error: enrollError } = await supabase
-          .from("enrollments")
-          .upsert(
-            preEnrollments.map((pe) => ({
-              student_id: pe.student_id,
-              classroom_id: pe.classroom_id,
-              status: "enrolled",
-            })),
-            { onConflict: "student_id,classroom_id", ignoreDuplicates: true }
-          )
-
-        if (enrollError) {
-          return NextResponse.json({ error: enrollError.message }, { status: 500 })
-        }
+      if (promoteError) {
+        return NextResponse.json({ error: promoteError.message }, { status: 500 })
       }
     }
   }

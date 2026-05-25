@@ -24,6 +24,7 @@ export default async function StudentGradesPage() {
       grades(grade, remarks)
     `)
     .eq("student_id", userId)
+    .in("status", ["enrolled", "dropped"])
     .order("created_at", { ascending: false })
 
   if (!enrollments || enrollments.length === 0) {

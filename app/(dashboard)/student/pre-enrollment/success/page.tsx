@@ -22,7 +22,7 @@ export default async function PreEnrollmentSuccessPage() {
   const supabase = await getSupabaseServerClient()
 
   const { data: preEnrollments } = await supabase
-    .from("pre_enrollments")
+    .from("enrollments")
     .select(`
       id,
       classrooms!inner(
@@ -33,7 +33,7 @@ export default async function PreEnrollmentSuccessPage() {
       )
     `)
     .eq("student_id", userId)
-    .eq("status", "pending")
+    .eq("status", "pre_enrolled")
     .order("created_at")
 
   if (!preEnrollments || preEnrollments.length === 0) {

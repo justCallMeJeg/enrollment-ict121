@@ -13,7 +13,6 @@ export default async function CoursesPage() {
 
   const [
     { data: enrollments },
-    { data: preEnrollments },
     { data: activeSemester },
   ] = await Promise.all([
     supabase
@@ -27,19 +26,6 @@ export default async function CoursesPage() {
           semesters!semester_id!inner(id, academic_year_id, academic_years!inner(id, label))
         ),
         grades(grade, remarks)
-      `)
-      .eq("student_id", userId)
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("pre_enrollments")
-      .select(`
-        id, status, created_at,
-        classrooms!inner(
-          section, year_level,
-          programs!program_id(code),
-          courses!course_id(course_code, name, units, semester),
-          semesters!semester_id!inner(id, academic_year_id, academic_years!inner(id, label))
-        )
       `)
       .eq("student_id", userId)
       .order("created_at", { ascending: false }),
@@ -60,7 +46,7 @@ export default async function CoursesPage() {
     return code ? `${code}-${cr.year_level}${cr.section}` : cr.section
   }
 
-  const enrolledRows: CourseHistoryRow[] = (enrollments ?? []).map((e) => {
+  const rows: CourseHistoryRow[] = (enrollments ?? []).map((e) => {
     const classroom = Array.isArray(e.classrooms) ? e.classrooms[0] : e.classrooms
     const course = classroom?.courses
       ? Array.isArray(classroom.courses) ? classroom.courses[0] : classroom.courses
@@ -75,7 +61,7 @@ export default async function CoursesPage() {
 
     return {
       id: e.id,
-      type: "enrolled" as const,
+      type: e.status === "pre_enrolled" ? ("pre_enrolled" as const) : ("enrolled" as const),
       status: e.status,
       course_code: (course as { course_code: string } | null)?.course_code ?? "—",
       course_name: (course as { name: string } | null)?.name ?? "—",
@@ -91,41 +77,9 @@ export default async function CoursesPage() {
     }
   })
 
-  const preEnrolledRows: CourseHistoryRow[] = (preEnrollments ?? []).map((pe) => {
-    const classroom = Array.isArray(pe.classrooms) ? pe.classrooms[0] : pe.classrooms
-    const course = classroom?.courses
-      ? Array.isArray(classroom.courses) ? classroom.courses[0] : classroom.courses
-      : null
-    const sem = classroom?.semesters
-      ? Array.isArray(classroom.semesters) ? classroom.semesters[0] : classroom.semesters
-      : null
-    const yearData = sem?.academic_years
-      ? Array.isArray(sem.academic_years) ? sem.academic_years[0] : sem.academic_years
-      : null
-
-    return {
-      id: pe.id,
-      type: "pre_enrolled" as const,
-      status: pe.status,
-      course_code: (course as { course_code: string } | null)?.course_code ?? "—",
-      course_name: (course as { name: string } | null)?.name ?? "—",
-      semester: (course as { semester: string } | null)?.semester ?? "—",
-      units: (course as { units: number } | null)?.units ?? 0,
-      section: classroom ? extractSection(classroom as Parameters<typeof extractSection>[0]) : "—",
-      grade: null,
-      remarks: null,
-      yearId: (yearData as { id: string } | null)?.id ?? sem?.academic_year_id ?? "unknown",
-      yearLabel: (yearData as { label: string } | null)?.label ?? "Unknown Year",
-      semesterId: sem?.id ?? "",
-      canDrop: false,
-    }
-  })
-
-  const allRows = [...enrolledRows, ...preEnrolledRows]
-
   const activeYearId = activeSemester?.academic_year_id ?? null
 
-  if (allRows.length === 0) {
+  if (rows.length === 0) {
     return (
       <div>
         <PageHeader title="My Courses" description="Your enrollment history and pre-enrollments" />
@@ -141,7 +95,7 @@ export default async function CoursesPage() {
     <div>
       <PageHeader title="My Courses" description="Your enrollment history and pre-enrollments" />
       <CoursesList
-        rows={allRows}
+        rows={rows}
         defaultYearId={activeYearId}
         activeSemesterId={activeSemester?.id ?? null}
       />

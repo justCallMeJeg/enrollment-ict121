@@ -18,35 +18,40 @@ export default async function ProfessorPreEnrollmentsPage() {
 
   const supabase = await getSupabaseServerClient()
 
-  const { data: upcomingYear } = await supabase
-    .from("academic_years")
-    .select("id, label")
-    .eq("status", "upcoming")
-    .single()
+  const { data: preEnrollSemester } = await supabase
+    .from("semesters")
+    .select("id, academic_years!inner(id, label)")
+    .eq("status", "pre_enrollment")
+    .maybeSingle()
 
-  if (!upcomingYear) {
+  if (!preEnrollSemester) {
     return (
       <div>
         <PageHeader
           title="Pre-Enrollments"
-          description="Students who pre-enrolled in your courses for the upcoming year"
+          description="Students who pre-enrolled in your courses for the upcoming semester"
         />
         <EmptyState
-          title="No upcoming academic year"
-          description="Pre-enrollment data will appear here when an upcoming year is active."
+          title="Pre-enrollment is not open"
+          description="Pre-enrollment data will appear here when the admin opens the pre-enrollment period."
         />
       </div>
     )
   }
 
+  const yearData = Array.isArray(preEnrollSemester.academic_years)
+    ? preEnrollSemester.academic_years[0]
+    : preEnrollSemester.academic_years
+  const upcomingYear = { label: (yearData as { label: string } | null)?.label ?? "" }
+
   const { data: preEnrollments } = await supabase
-    .from("pre_enrollments")
+    .from("enrollments")
     .select(
-      "id, status, created_at, classrooms!inner(professor_id, academic_year_id, courses(course_code, name)), students(student_id, section, users(name))"
+      "id, status, created_at, classrooms!inner(professor_id, semester_id, courses(course_code, name)), students(student_id, section, users(name))"
     )
-    .eq("status", "pending")
+    .eq("status", "pre_enrolled")
     .eq("classrooms.professor_id", userId)
-    .eq("classrooms.academic_year_id", upcomingYear.id)
+    .eq("classrooms.semester_id", preEnrollSemester.id)
     .order("created_at")
 
   const filtered = (preEnrollments ?? []).map((pe) => {
@@ -58,7 +63,7 @@ export default async function ProfessorPreEnrollmentsPage() {
     <div>
       <PageHeader
         title="Pre-Enrollments"
-        description={`Students who pre-enrolled for ${upcomingYear.label}`}
+        description={upcomingYear.label ? `Students who pre-enrolled for ${upcomingYear.label}` : "Students who pre-enrolled in your courses"}
       />
       {filtered.length === 0 ? (
         <EmptyState

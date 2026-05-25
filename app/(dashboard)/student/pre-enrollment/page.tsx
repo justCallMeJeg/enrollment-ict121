@@ -69,10 +69,10 @@ export default async function PreEnrollmentPage() {
 
   // Which classrooms is this student already pre-enrolled in?
   const { data: preEnrolled } = await supabase
-    .from("pre_enrollments")
+    .from("enrollments")
     .select("classroom_id")
     .eq("student_id", userId)
-    .eq("status", "pending")
+    .eq("status", "pre_enrolled")
 
   const preEnrolledIds = new Set((preEnrolled ?? []).map((p) => p.classroom_id))
 

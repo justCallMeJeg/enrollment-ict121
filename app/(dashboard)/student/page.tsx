@@ -46,10 +46,10 @@ export default async function StudentDashboard() {
       .eq("status", "pre_enrollment")
       .maybeSingle(),
     supabase
-      .from("pre_enrollments")
+      .from("enrollments")
       .select("*", { count: "exact", head: true })
       .eq("student_id", userId)
-      .eq("status", "pending"),
+      .eq("status", "pre_enrolled"),
     supabase
       .from("enrollments")
       .select(`

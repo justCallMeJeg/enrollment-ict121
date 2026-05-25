@@ -15,7 +15,6 @@ export async function POST(request: NextRequest) {
 
   const supabase = await getSupabaseServerClient()
 
-  // Verify the classroom belongs to a semester currently in pre_enrollment status
   const { data: classroom } = await supabase
     .from("classrooms")
     .select("id, semesters(status)")
@@ -38,9 +37,9 @@ export async function POST(request: NextRequest) {
   }
 
   const { data, error } = await supabase
-    .from("pre_enrollments")
+    .from("enrollments")
     .upsert(
-      { student_id: session.userId, classroom_id, status: "pending" },
+      { student_id: session.userId, classroom_id, status: "pre_enrolled" },
       { onConflict: "student_id,classroom_id" }
     )
     .select()
@@ -63,10 +62,11 @@ export async function DELETE(request: NextRequest) {
 
   const supabase = await getSupabaseServerClient()
   const { error } = await supabase
-    .from("pre_enrollments")
+    .from("enrollments")
     .update({ status: "dropped" })
     .eq("student_id", session.userId)
     .eq("classroom_id", classroom_id)
+    .eq("status", "pre_enrolled")
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
