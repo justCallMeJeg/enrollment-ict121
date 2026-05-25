@@ -4,17 +4,15 @@ import { useParams } from "next/navigation"
 import Link from "next/link"
 import { ChevronLeft } from "lucide-react"
 import { useAcademicYears } from "@/lib/hooks/use-academic-years"
-import { useSemesters } from "@/lib/hooks/use-semesters"
 import { useStats } from "@/lib/hooks/use-stats"
 import { useOfferedCourses } from "@/lib/hooks/use-offered-courses"
 import { PageHeader } from "@/components/shared/page-header"
 import { DashboardSkeleton } from "@/components/shared/skeletons"
-import { SemesterListView } from "@/components/admin/semester-list-view"
 import { StudentDistributionCharts } from "@/components/admin/student-distribution-charts"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Users, GraduationCap, BookOpen, Library } from "lucide-react"
-import type { AcademicYearStatus, Semester } from "@/types"
+import type { AcademicYearStatus } from "@/types"
 
 const STATUS_BADGE: Record<AcademicYearStatus, "default" | "secondary" | "outline"> = {
   active: "default",
@@ -26,11 +24,10 @@ const STATUS_BADGE: Record<AcademicYearStatus, "default" | "secondary" | "outlin
 export default function YearDashboardPage() {
   const { yearId } = useParams<{ yearId: string }>()
   const { years, isLoading: yearsLoading } = useAcademicYears()
-  const { semesters, isLoading: semsLoading } = useSemesters(yearId)
   const { stats, isLoading: statsLoading } = useStats(yearId)
   const { courses: offeredCourses, isLoading: offeredLoading } = useOfferedCourses(yearId)
 
-  if (yearsLoading || semsLoading || statsLoading || offeredLoading) return <DashboardSkeleton />
+  if (yearsLoading || statsLoading || offeredLoading) return <DashboardSkeleton />
 
   const year = years.find((y) => y.id === yearId)
   if (!year) return null
@@ -89,15 +86,10 @@ export default function YearDashboardPage() {
         })}
       </div>
 
-      <div className="mb-8">
+      <div>
         <h2 className="text-sm font-semibold mb-4">Student Population</h2>
         <StudentDistributionCharts yearId={yearId} />
       </div>
-
-      <SemesterListView
-        academicYear={{ id: year.id, label: year.label }}
-        semesters={semesters as Semester[]}
-      />
     </div>
   )
 }

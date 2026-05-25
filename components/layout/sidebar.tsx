@@ -18,6 +18,7 @@ import {
   Check,
   UserCircle,
   Star,
+  CalendarDays,
 } from "lucide-react"
 import { useSidebar } from "./sidebar-context"
 import { useAdminYearContext } from "./admin-year-context"
@@ -88,6 +89,7 @@ const DISPLAY_OPTIONS: { label: string; value: DisplayMode }[] = [
 
 const YEAR_SCOPED_ITEMS = [
   { label: "Dashboard", hrefSuffix: "", icon: LayoutDashboard, exactMatch: true },
+  { label: "Semesters", hrefSuffix: "/semesters", icon: CalendarDays, exactMatch: false },
   { label: "Courses", hrefSuffix: "/courses", icon: BookOpen, exactMatch: false },
 ]
 

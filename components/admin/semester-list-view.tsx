@@ -8,9 +8,15 @@ import { Button } from "@/components/ui/button"
 import { ConfirmModal } from "@/components/shared/confirm-modal"
 import { semesterLabel } from "@/types"
 import type { Semester, SemesterStatus } from "@/types"
-import { BookOpen, ChevronRight, Trash2, Zap, StopCircle } from "lucide-react"
+import { BookOpen, ChevronRight, Zap, StopCircle, Users, Library } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+
+export type SemesterStats = {
+  classroomCount: number
+  enrolledCount: number
+  totalUnits: number
+}
 
 const STATUS_BADGE: Record<SemesterStatus, "default" | "secondary" | "outline"> = {
   active: "default",
@@ -30,12 +36,12 @@ const TERM_ORDER: Record<string, number> = { "1st": 0, "2nd": 1, midyear: 2 }
 
 type Action = {
   semId: string
-  type: "open" | "activate" | "end" | "delete"
+  type: "open" | "activate" | "end"
 }
 
 const ACTION_META: Record<
   Action["type"],
-  { title: string; description: (label: string) => string; confirmLabel: string; nextStatus?: SemesterStatus }
+  { title: string; description: (label: string) => string; confirmLabel: string; nextStatus: SemesterStatus }
 > = {
   open: {
     title: "Open Pre-Enrollment",
@@ -58,20 +64,16 @@ const ACTION_META: Record<
     confirmLabel: "End Semester",
     nextStatus: "ended",
   },
-  delete: {
-    title: "Delete Semester",
-    description: (l) =>
-      `Are you sure you want to delete "${l}"? This cannot be undone.`,
-    confirmLabel: "Delete",
-  },
 }
 
 export function SemesterListView({
   academicYear,
   semesters,
+  statsBySem,
 }: {
   academicYear: { id: string; label: string }
   semesters: Semester[]
+  statsBySem?: Record<string, SemesterStats>
 }) {
   const [pendingAction, setPendingAction] = useState<Action | null>(null)
   const [loading, setLoading] = useState(false)
@@ -95,34 +97,23 @@ export function SemesterListView({
     if (!pendingAction || !targetSem) return
     setLoading(true)
     try {
-      if (pendingAction.type === "delete") {
-        const res = await fetch(`/api/admin/semesters/${pendingAction.semId}`, {
-          method: "DELETE",
-        })
-        if (!res.ok) {
-          const d = await res.json()
-          throw new Error(d.error)
-        }
-        toast.success("Semester deleted")
-      } else {
-        const nextStatus = ACTION_META[pendingAction.type].nextStatus!
-        const res = await fetch(`/api/admin/semesters/${pendingAction.semId}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status: nextStatus }),
-        })
-        if (!res.ok) {
-          const d = await res.json()
-          throw new Error(d.error)
-        }
-        toast.success(
-          pendingAction.type === "open"
-            ? "Pre-enrollment opened"
-            : pendingAction.type === "activate"
-            ? "Semester activated"
-            : "Semester ended"
-        )
+      const nextStatus = ACTION_META[pendingAction.type].nextStatus
+      const res = await fetch(`/api/admin/semesters/${pendingAction.semId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: nextStatus }),
+      })
+      if (!res.ok) {
+        const d = await res.json()
+        throw new Error(d.error)
       }
+      toast.success(
+        pendingAction.type === "open"
+          ? "Pre-enrollment opened"
+          : pendingAction.type === "activate"
+          ? "Semester activated"
+          : "Semester ended"
+      )
       setPendingAction(null)
       await mutate(`/api/admin/semesters?yearId=${academicYear.id}`)
     } catch (err) {
@@ -152,6 +143,7 @@ export function SemesterListView({
             sem={sem}
             academicYearId={academicYear.id}
             canOpenPreEnrollment={canOpenPreEnrollment(sem)}
+            stats={statsBySem?.[sem.id]}
             onAction={setPendingAction}
           />
         ))}
@@ -167,7 +159,7 @@ export function SemesterListView({
             : ""
         }
         confirmLabel={meta?.confirmLabel ?? "Confirm"}
-        variant={pendingAction?.type === "delete" ? "destructive" : "default"}
+        variant={pendingAction?.type === "end" ? "destructive" : "default"}
         onConfirm={confirmAction}
         loading={loading}
       />
@@ -179,11 +171,13 @@ function SemesterCard({
   sem,
   academicYearId,
   canOpenPreEnrollment,
+  stats,
   onAction,
 }: {
   sem: Semester
   academicYearId: string
   canOpenPreEnrollment: boolean
+  stats?: SemesterStats
   onAction: (a: Action) => void
 }) {
   const status = sem.status as SemesterStatus
@@ -229,37 +223,49 @@ function SemesterCard({
         </div>
       </Link>
 
+      {/* Stats section */}
+      {stats !== undefined && (
+        <div className="px-5 py-3 border-t grid grid-cols-3 gap-2">
+          <div>
+            <p className="text-[10px] text-muted-foreground">Classrooms</p>
+            <p className="text-sm font-semibold">{stats.classroomCount}</p>
+          </div>
+          <div>
+            <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+              <Users className="size-2.5" />
+              Enrolled
+            </p>
+            <p className="text-sm font-semibold">{stats.enrolledCount}</p>
+          </div>
+          <div>
+            <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+              <Library className="size-2.5" />
+              Units
+            </p>
+            <p className="text-sm font-semibold">{stats.totalUnits}</p>
+          </div>
+        </div>
+      )}
+
       {/* Action bar */}
       <div className="flex items-center gap-1 px-4 pb-3 pt-2 border-t">
         {status === "draft" && (
-          <>
+          canOpenPreEnrollment ? (
             <Button
               size="sm"
-              variant="ghost"
-              className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive"
+              variant="outline"
+              className="h-7 px-2 text-xs ml-auto"
               onClick={(e) => {
                 e.preventDefault()
-                onAction({ semId: sem.id, type: "delete" })
+                onAction({ semId: sem.id, type: "open" })
               }}
             >
-              <Trash2 className="size-3 mr-1" />
-              Delete
+              <BookOpen className="size-3 mr-1" />
+              Open Pre-Enrollment
             </Button>
-            {canOpenPreEnrollment && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-7 px-2 text-xs ml-auto"
-                onClick={(e) => {
-                  e.preventDefault()
-                  onAction({ semId: sem.id, type: "open" })
-                }}
-              >
-                <BookOpen className="size-3 mr-1" />
-                Open Pre-Enrollment
-              </Button>
-            )}
-          </>
+          ) : (
+            <span className="text-xs text-muted-foreground ml-auto">Complete previous semester first</span>
+          )
         )}
 
         {status === "pre_enrollment" && (
