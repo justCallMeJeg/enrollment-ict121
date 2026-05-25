@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { mutate } from "swr"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -42,6 +43,7 @@ export function AcademicYearManager({
   years: AcademicYear[]
   semesterCounts?: Record<string, number>
 }) {
+  const router = useRouter()
   const [saving, setSaving] = useState(false)
   const [editTarget, setEditTarget] = useState<AcademicYear | null>(null)
   const [editLabel, setEditLabel] = useState("")
@@ -97,6 +99,7 @@ export function AcademicYearManager({
       toast.success("Academic year updated")
       closeEdit()
       await mutate("/api/admin/academic-years")
+      router.refresh()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to update")
     } finally {
@@ -115,6 +118,7 @@ export function AcademicYearManager({
       if (!res.ok) throw new Error(data.error)
 
       await mutate("/api/admin/academic-years")
+      router.refresh()
       toast.success("Academic year deleted")
       setDeleteTarget(null)
     } catch (err) {
