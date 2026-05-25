@@ -6,12 +6,14 @@ import { ChevronLeft } from "lucide-react"
 import { useAcademicYears } from "@/lib/hooks/use-academic-years"
 import { useSemesters } from "@/lib/hooks/use-semesters"
 import { useStats } from "@/lib/hooks/use-stats"
+import { useOfferedCourses } from "@/lib/hooks/use-offered-courses"
 import { PageHeader } from "@/components/shared/page-header"
 import { DashboardSkeleton } from "@/components/shared/skeletons"
 import { SemesterListView } from "@/components/admin/semester-list-view"
+import { StudentDistributionCharts } from "@/components/admin/student-distribution-charts"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Users, GraduationCap, BookOpen } from "lucide-react"
+import { Users, GraduationCap, BookOpen, Library } from "lucide-react"
 import type { AcademicYearStatus, Semester } from "@/types"
 
 const STATUS_BADGE: Record<AcademicYearStatus, "default" | "secondary" | "outline"> = {
@@ -26,16 +28,24 @@ export default function YearDashboardPage() {
   const { years, isLoading: yearsLoading } = useAcademicYears()
   const { semesters, isLoading: semsLoading } = useSemesters(yearId)
   const { stats, isLoading: statsLoading } = useStats(yearId)
+  const { courses: offeredCourses, isLoading: offeredLoading } = useOfferedCourses(yearId)
 
-  if (yearsLoading || semsLoading || statsLoading) return <DashboardSkeleton />
+  if (yearsLoading || semsLoading || statsLoading || offeredLoading) return <DashboardSkeleton />
 
   const year = years.find((y) => y.id === yearId)
   if (!year) return null
 
+  type OfferedCourse = { units?: number }
+  const totalUnits = (offeredCourses as unknown as OfferedCourse[]).reduce(
+    (sum, c) => sum + (c.units ?? 0),
+    0
+  )
+
   const statCards = [
     { label: "Total Students", value: stats.students, icon: Users },
     { label: "Total Professors", value: stats.professors, icon: GraduationCap },
-    { label: "Courses This Year", value: stats.courses, icon: BookOpen },
+    { label: "Courses Offered", value: offeredCourses.length, icon: BookOpen },
+    { label: "Total Units", value: totalUnits, icon: Library },
   ]
 
   return (
@@ -62,7 +72,7 @@ export default function YearDashboardPage() {
         </Badge>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
         {statCards.map((s) => {
           const Icon = s.icon
           return (
@@ -77,6 +87,11 @@ export default function YearDashboardPage() {
             </Card>
           )
         })}
+      </div>
+
+      <div className="mb-8">
+        <h2 className="text-sm font-semibold mb-4">Student Population</h2>
+        <StudentDistributionCharts yearId={yearId} />
       </div>
 
       <SemesterListView

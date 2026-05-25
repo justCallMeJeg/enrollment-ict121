@@ -90,11 +90,11 @@ const DISPLAY_OPTIONS: { label: string; value: DisplayMode }[] = [
 
 const YEAR_SCOPED_ITEMS = [
   { label: "Dashboard", hrefSuffix: "", icon: LayoutDashboard, exactMatch: true },
+  { label: "Courses", hrefSuffix: "/courses", icon: BookOpen, exactMatch: false },
 ]
 
 const SEMESTER_SCOPED_ITEMS = [
   { label: "Semester Overview", hrefSuffix: "", icon: LayoutDashboard, exactMatch: true },
-  { label: "Courses", hrefSuffix: "/courses", icon: BookOpen, exactMatch: false },
 ]
 
 function SidebarSectionLabel({ label, expanded }: { label: string; expanded: boolean }) {

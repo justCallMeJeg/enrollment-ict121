@@ -26,6 +26,8 @@ const STATUS_LABEL: Record<SemesterStatus, string> = {
   ended: "Ended",
 }
 
+const TERM_ORDER: Record<string, number> = { "1st": 0, "2nd": 1, midyear: 2 }
+
 type Action = {
   semId: string
   type: "open" | "activate" | "end" | "delete"
@@ -74,10 +76,20 @@ export function SemesterListView({
   const [pendingAction, setPendingAction] = useState<Action | null>(null)
   const [loading, setLoading] = useState(false)
 
+  const sorted = [...semesters].sort(
+    (a, b) => (TERM_ORDER[a.term] ?? 99) - (TERM_ORDER[b.term] ?? 99)
+  )
+
   const targetSem = pendingAction
     ? semesters.find((s) => s.id === pendingAction.semId)
     : null
   const meta = pendingAction ? ACTION_META[pendingAction.type] : null
+
+  function canOpenPreEnrollment(sem: Semester): boolean {
+    const idx = sorted.findIndex((s) => s.id === sem.id)
+    if (idx <= 0) return true
+    return sorted[idx - 1].status === "ended"
+  }
 
   async function confirmAction() {
     if (!pendingAction || !targetSem) return
@@ -134,11 +146,12 @@ export function SemesterListView({
   return (
     <>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {semesters.map((sem) => (
+        {sorted.map((sem) => (
           <SemesterCard
             key={sem.id}
             sem={sem}
             academicYearId={academicYear.id}
+            canOpenPreEnrollment={canOpenPreEnrollment(sem)}
             onAction={setPendingAction}
           />
         ))}
@@ -165,10 +178,12 @@ export function SemesterListView({
 function SemesterCard({
   sem,
   academicYearId,
+  canOpenPreEnrollment,
   onAction,
 }: {
   sem: Semester
   academicYearId: string
+  canOpenPreEnrollment: boolean
   onAction: (a: Action) => void
 }) {
   const status = sem.status as SemesterStatus
@@ -177,7 +192,9 @@ function SemesterCard({
     <div
       className={cn(
         "rounded-lg border bg-card flex flex-col transition-shadow hover:shadow-md group",
-        status === "active" && "border-primary/40"
+        status === "active"
+          ? "border-primary ring-1 ring-primary/20 shadow-sm"
+          : ""
       )}
     >
       {/* Clickable body → semester detail */}
@@ -186,9 +203,17 @@ function SemesterCard({
         className="p-5 flex-1 flex flex-col gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-t-lg"
       >
         <div className="flex items-start justify-between gap-2">
-          <h3 className="font-semibold text-sm leading-snug group-hover:text-primary transition-colors">
-            {semesterLabel(sem.term)}
-          </h3>
+          <div className="flex flex-col gap-1">
+            <h3 className="font-semibold text-sm leading-snug group-hover:text-primary transition-colors">
+              {semesterLabel(sem.term)}
+            </h3>
+            {status === "active" && (
+              <span className="inline-flex items-center gap-1.5 text-[10px] font-medium text-primary">
+                <span className="size-1.5 rounded-full bg-primary animate-pulse" />
+                Live
+              </span>
+            )}
+          </div>
           <Badge
             variant={STATUS_BADGE[status] ?? "outline"}
             className="capitalize shrink-0 text-[11px]"
@@ -220,18 +245,20 @@ function SemesterCard({
               <Trash2 className="size-3 mr-1" />
               Delete
             </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-7 px-2 text-xs ml-auto"
-              onClick={(e) => {
-                e.preventDefault()
-                onAction({ semId: sem.id, type: "open" })
-              }}
-            >
-              <BookOpen className="size-3 mr-1" />
-              Open Pre-Enrollment
-            </Button>
+            {canOpenPreEnrollment && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 px-2 text-xs ml-auto"
+                onClick={(e) => {
+                  e.preventDefault()
+                  onAction({ semId: sem.id, type: "open" })
+                }}
+              >
+                <BookOpen className="size-3 mr-1" />
+                Open Pre-Enrollment
+              </Button>
+            )}
           </>
         )}
 
