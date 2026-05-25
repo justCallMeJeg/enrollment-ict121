@@ -13,17 +13,14 @@ export function PreEnrollmentSuccessRedirect() {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setCountdown((c) => {
-        if (c <= 1) {
-          clearInterval(interval)
-          router.push("/student")
-          return 0
-        }
-        return c - 1
-      })
+      setCountdown((c) => Math.max(0, c - 1))
     }, 1000)
     return () => clearInterval(interval)
-  }, [router])
+  }, [])
+
+  useEffect(() => {
+    if (countdown === 0) router.push("/student")
+  }, [countdown, router])
 
   return (
     <div className="flex flex-col sm:flex-row items-center gap-3">
