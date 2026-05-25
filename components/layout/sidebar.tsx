@@ -12,14 +12,13 @@ import {
   BookOpen,
   GraduationCap,
   ClipboardList,
-  Star,
   School,
   Building2,
   BookMarked,
   PanelLeft,
   Check,
-  Layers,
   UserCircle,
+  Star,
 } from "lucide-react"
 import { useSidebar } from "./sidebar-context"
 import { useAdminYearContext } from "./admin-year-context"
@@ -91,13 +90,11 @@ const DISPLAY_OPTIONS: { label: string; value: DisplayMode }[] = [
 
 const YEAR_SCOPED_ITEMS = [
   { label: "Dashboard", hrefSuffix: "", icon: LayoutDashboard, exactMatch: true },
-  { label: "Courses", hrefSuffix: "/courses", icon: BookOpen, exactMatch: false },
 ]
 
 const SEMESTER_SCOPED_ITEMS = [
   { label: "Semester Overview", hrefSuffix: "", icon: LayoutDashboard, exactMatch: true },
-  { label: "Classrooms", hrefSuffix: "/classrooms", icon: Layers, exactMatch: false },
-  { label: "Grade Management", hrefSuffix: "/grades", icon: Star, exactMatch: false },
+  { label: "Courses", hrefSuffix: "/courses", icon: BookOpen, exactMatch: false },
 ]
 
 function SidebarSectionLabel({ label, expanded }: { label: string; expanded: boolean }) {
