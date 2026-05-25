@@ -86,24 +86,18 @@ export function UserManager({
   }
 
   function handleProgramChange(programId: string) {
-    const prog = programs.find((p) => p.id === programId)
-    const code = prog?.code ?? ""
     set("program_id", programId)
-    // Only auto-prefix section in create mode (editTarget is null)
-    if (!editTarget) {
-      set("section", code ? `${code}-` : "")
-    }
+    if (!editTarget) set("section", "")
   }
 
   const selectedProgram = programs.find((p) => p.id === form.program_id)
-  const sectionPrefix = role === "student" ? (selectedProgram?.code ?? "") : ""
-  const sectionSuffix =
-    sectionPrefix && form.section.startsWith(`${sectionPrefix}-`)
-      ? form.section.slice(sectionPrefix.length + 1)
-      : form.section
+  const sectionPrefix =
+    role === "student" && selectedProgram
+      ? `${selectedProgram.code}-${form.year_level}`
+      : ""
 
   function handleSectionChange(val: string) {
-    set("section", sectionPrefix ? `${sectionPrefix}-${val}` : val)
+    set("section", val)
   }
 
   function openCreate() {
@@ -398,9 +392,9 @@ export function UserManager({
                   </InputGroupAddon>
                   <InputGroupInput
                     id="um-section"
-                    value={sectionSuffix}
-                    onChange={(e) => handleSectionChange(e.target.value)}
-                    placeholder="e.g. 3A"
+                    value={form.section}
+                    onChange={(e) => handleSectionChange(e.target.value.toUpperCase())}
+                    placeholder="e.g. A"
                     required
                   />
                 </InputGroup>

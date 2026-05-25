@@ -47,21 +47,17 @@ export function CreateUserForm({ programs }: Props) {
   }
 
   function handleProgramChange(programId: string) {
-    const prog = programs.find((p) => p.id === programId)
-    const code = prog?.code ?? ""
     set("program_id", programId)
-    set("section", code ? `${code}-` : "")
+    set("section", "")
   }
 
   const selectedProgram = programs.find((p) => p.id === form.program_id)
-  const sectionPrefix = selectedProgram?.code ?? ""
-  const sectionSuffix =
-    sectionPrefix && form.section.startsWith(`${sectionPrefix}-`)
-      ? form.section.slice(sectionPrefix.length + 1)
-      : form.section
+  const sectionPrefix = selectedProgram
+    ? `${selectedProgram.code}-${form.year_level}`
+    : ""
 
   function handleSectionChange(val: string) {
-    set("section", sectionPrefix ? `${sectionPrefix}-${val}` : val)
+    set("section", val)
   }
 
   async function handleSubmit(e: { preventDefault(): void }) {
@@ -211,9 +207,9 @@ export function CreateUserForm({ programs }: Props) {
                     </InputGroupAddon>
                     <InputGroupInput
                       id="section"
-                      value={sectionSuffix}
-                      onChange={(e) => handleSectionChange(e.target.value)}
-                      placeholder="e.g. 3A"
+                      value={form.section}
+                      onChange={(e) => handleSectionChange(e.target.value.toUpperCase())}
+                      placeholder="e.g. A"
                       required={role === "student"}
                     />
                   </InputGroup>
