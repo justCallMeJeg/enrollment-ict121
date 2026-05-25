@@ -15,9 +15,20 @@ export async function POST(request: NextRequest) {
 
   const supabase = await getSupabaseServerClient()
 
+  // Fetch the student's profile for eligibility validation
+  const { data: student } = await supabase
+    .from("students")
+    .select("program_id, year_level, section")
+    .eq("user_id", session.userId)
+    .single()
+
+  if (!student) {
+    return NextResponse.json({ error: "Student profile not found" }, { status: 404 })
+  }
+
   const { data: classroom } = await supabase
     .from("classrooms")
-    .select("id, semesters(status)")
+    .select("id, program_id, year_level, section, semesters(status)")
     .eq("id", classroom_id)
     .single()
 
@@ -33,6 +44,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { error: "Pre-enrollment is not currently open for this semester" },
       { status: 400 }
+    )
+  }
+
+  // Validate the classroom matches the student's program, year level, and section
+  const programMatches =
+    classroom.program_id === null || classroom.program_id === student.program_id
+  if (!programMatches || classroom.year_level !== student.year_level || classroom.section !== student.section) {
+    return NextResponse.json(
+      { error: "This classroom is not available for your program, year level, or section" },
+      { status: 403 }
     )
   }
 

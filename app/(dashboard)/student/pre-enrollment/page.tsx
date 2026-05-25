@@ -39,7 +39,7 @@ export default async function PreEnrollmentPage() {
 
   const { data: student } = await supabase
     .from("students")
-    .select("year_level, program_id")
+    .select("year_level, program_id, section")
     .eq("user_id", userId)
     .single()
 
@@ -47,7 +47,8 @@ export default async function PreEnrollmentPage() {
     return <EmptyState title="Student profile not found" />
   }
 
-  // Fetch classrooms for the pre-enrollment semester — filter directly by classroom's program/year_level
+  // Fetch classrooms for the pre-enrollment semester filtered by the student's
+  // program (or classrooms open to all programs), year level, and section.
   const { data: classrooms } = await supabase
     .from("classrooms")
     .select(`
@@ -63,8 +64,9 @@ export default async function PreEnrollmentPage() {
       programs!program_id(code)
     `)
     .eq("semester_id", preEnrollSemester.id)
-    .eq("program_id", student.program_id)
+    .or(`program_id.eq.${student.program_id},program_id.is.null`)
     .eq("year_level", student.year_level)
+    .eq("section", student.section)
     .order("created_at")
 
   // Which classrooms is this student already pre-enrolled in?
