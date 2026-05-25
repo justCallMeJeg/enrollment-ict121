@@ -36,7 +36,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { ChevronLeft, Copy, Pencil, Plus, Trash2, Users } from "lucide-react"
+import { BookOpen, ChevronLeft, Copy, Pencil, Plus, StopCircle, Trash2, Users, Zap } from "lucide-react"
 import { toast } from "sonner"
 import { semesterLabel } from "@/types"
 import type { SemesterStatus, SemesterTerm } from "@/types"
@@ -53,6 +53,16 @@ const STATUS_BADGE: Record<SemesterStatus, "default" | "secondary" | "outline"> 
   pre_enrollment: "secondary",
   draft: "outline",
   ended: "outline",
+}
+
+type CourseShape = {
+  id: string
+  course_code: string
+  name: string
+  semester: string
+  units: number
+  year_level: number
+  programs: { id: string; name: string; code: string }[]
 }
 
 type ClassroomRow = {
@@ -95,7 +105,7 @@ function formatSection(prog: { code: string } | null | undefined, yearLevel: num
 export default function SemesterDetailPage() {
   const { yearId, semId } = useParams<{ yearId: string; semId: string }>()
   const { years, isLoading: yearsLoading } = useAcademicYears()
-  const { semesters, isLoading: semsLoading } = useSemesters(yearId)
+  const { semesters, isLoading: semsLoading, mutate: mutateSems } = useSemesters(yearId)
   const { classrooms, isLoading: classroomsLoading } = useClassrooms(yearId, semId)
   const { courses, isLoading: coursesLoading } = useCourses()
   const { professors, isLoading: profsLoading } = useProfessors()
@@ -116,16 +126,34 @@ export default function SemesterDetailPage() {
   const [copyFromYearId, setCopyFromYearId] = useState("")
   const [copying, setCopying] = useState(false)
 
+  // Semester status CTA
+  const [semAction, setSemAction] = useState<"open" | "activate" | "end" | null>(null)
+  const [semActionLoading, setSemActionLoading] = useState(false)
+
   const swrKey = `/api/admin/classrooms?yearId=${yearId}&semId=${semId}`
 
   const programOptions = useMemo(
     () => programs.map((p: { id: string; name: string; code: string }) => ({ value: p.id, label: p.name, code: p.code })),
     [programs]
   )
-  const courseOptions = useMemo(
-    () => courses.map((c: { id: string; name: string; course_code: string }) => ({ value: c.id, label: c.name, code: c.course_code })),
-    [courses]
-  )
+
+  // Filter courses by the current semester term AND the selected program
+  const courseOptions = useMemo(() => {
+    const sem = (semesters as { id: string; term: string }[]).find((s) => s.id === semId)
+    const semTerm = sem?.term
+
+    let filtered = courses as unknown as CourseShape[]
+    if (semTerm) {
+      filtered = filtered.filter((c) => c.semester === semTerm)
+    }
+    if (form.program_id) {
+      filtered = filtered.filter(
+        (c) => c.programs.length === 0 || c.programs.some((p) => p.id === form.program_id)
+      )
+    }
+    return filtered.map((c) => ({ value: c.id, label: c.name, code: c.course_code }))
+  }, [courses, form.program_id, semesters, semId])
+
   const professorOptions = useMemo(
     () => professors.map((p: { user_id: string; faculty_id: string; users: { name: string } | { name: string }[] | null }) => {
       const u = Array.isArray(p.users) ? p.users[0] : p.users
@@ -223,8 +251,22 @@ export default function SemesterDetailPage() {
     setForm(INIT_FORM)
   }
 
+  function handleProgramChange(programId: string) {
+    setForm((prev) => {
+      const course = (courses as unknown as CourseShape[]).find((c) => c.id === prev.course_id)
+      const courseStillValid =
+        course &&
+        (course.programs.length === 0 || course.programs.some((p) => p.id === programId))
+      return {
+        ...prev,
+        program_id: programId,
+        course_id: courseStillValid ? prev.course_id : "",
+      }
+    })
+  }
+
   function handleCourseChange(courseId: string) {
-    const course = courses.find((c: { id: string; year_level: number }) => c.id === courseId)
+    const course = (courses as unknown as CourseShape[]).find((c) => c.id === courseId)
     setForm((p) => ({ ...p, course_id: courseId, year_level: course ? String(course.year_level) : p.year_level }))
   }
 
@@ -285,6 +327,53 @@ export default function SemesterDetailPage() {
     }
   }
 
+  async function handleSemesterAction() {
+    if (!semAction) return
+    setSemActionLoading(true)
+    const nextStatus: SemesterStatus =
+      semAction === "open" ? "pre_enrollment" :
+      semAction === "activate" ? "active" : "ended"
+    try {
+      const res = await fetch(`/api/admin/semesters/${semId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: nextStatus }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      toast.success(
+        semAction === "open" ? "Pre-enrollment opened" :
+        semAction === "activate" ? "Semester activated" : "Semester ended"
+      )
+      setSemAction(null)
+      await mutateSems()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Action failed")
+    } finally {
+      setSemActionLoading(false)
+    }
+  }
+
+  const semActionMeta = semAction
+    ? {
+        open: {
+          title: "Open Pre-Enrollment",
+          description: `Opening pre-enrollment for ${semesterLabel(term)} allows students to submit course requests for this semester.`,
+          confirmLabel: "Open Pre-Enrollment",
+        },
+        activate: {
+          title: "Activate Semester",
+          description: `Activating ${semesterLabel(term)} will start the semester and convert pending pre-enrollments to active enrollments.`,
+          confirmLabel: "Activate",
+        },
+        end: {
+          title: "End Semester",
+          description: `Ending ${semesterLabel(term)} will close all enrollments and lock grades. This cannot be undone.`,
+          confirmLabel: "End Semester",
+        },
+      }[semAction]
+    : null
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -298,9 +387,29 @@ export default function SemesterDetailPage() {
         <div className="flex-1">
           <PageHeader title={title} description={`${STATUS_LABEL[status]} · Semester overview`} />
         </div>
-        <Badge variant={STATUS_BADGE[status]} className="capitalize text-xs mt-1 shrink-0">
-          {STATUS_LABEL[status]}
-        </Badge>
+        <div className="flex items-center gap-2 mt-1 shrink-0">
+          <Badge variant={STATUS_BADGE[status]} className="capitalize text-xs">
+            {STATUS_LABEL[status]}
+          </Badge>
+          {status === "draft" && (
+            <Button size="sm" onClick={() => setSemAction("open")}>
+              <BookOpen className="size-3.5 mr-1.5" />
+              Open Pre-Enrollment
+            </Button>
+          )}
+          {status === "pre_enrollment" && (
+            <Button size="sm" onClick={() => setSemAction("activate")}>
+              <Zap className="size-3.5 mr-1.5" />
+              Activate Semester
+            </Button>
+          )}
+          {status === "active" && (
+            <Button size="sm" variant="outline" className="text-destructive border-destructive/30 hover:bg-destructive/5" onClick={() => setSemAction("end")}>
+              <StopCircle className="size-3.5 mr-1.5" />
+              End Semester
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Stats */}
@@ -444,13 +553,42 @@ export default function SemesterDetailPage() {
         submitLabel={editTarget ? "Save Changes" : "Create Classroom"}
         loading={loading}
       >
-        <div className="space-y-2">
-          <Label>Course <span className="text-destructive">*</span></Label>
-          <Combobox options={courseOptions} value={form.course_id} onValueChange={handleCourseChange} placeholder="Select a course…" searchPlaceholder="Search courses…" emptyText="No courses found." disabled={!!editTarget} />
-        </div>
+        {/* Program first — course options are filtered by it */}
         <div className="space-y-2">
           <Label>Program <span className="text-destructive">*</span></Label>
-          <Combobox options={programOptions} value={form.program_id} onValueChange={(v) => setForm((p) => ({ ...p, program_id: v }))} placeholder="Select a program…" searchPlaceholder="Search programs…" emptyText="No programs found." disabled={!!editTarget} />
+          <Combobox
+            options={programOptions}
+            value={form.program_id}
+            onValueChange={handleProgramChange}
+            placeholder="Select a program…"
+            searchPlaceholder="Search programs…"
+            emptyText="No programs found."
+            disabled={!!editTarget}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Course <span className="text-destructive">*</span></Label>
+          <Combobox
+            options={courseOptions}
+            value={form.course_id}
+            onValueChange={handleCourseChange}
+            placeholder="Select a course…"
+            searchPlaceholder="Search courses…"
+            emptyText={
+              form.program_id
+                ? `No ${semesterLabel(term)} courses for this program.`
+                : `No ${semesterLabel(term)} courses found.`
+            }
+            disabled={!!editTarget}
+          />
+          {!editTarget && (
+            <p className="text-xs text-muted-foreground">
+              {form.program_id
+                ? `${courseOptions.length} course${courseOptions.length !== 1 ? "s" : ""} available for ${selectedProgram?.code ?? "this program"} · ${semesterLabel(term)}`
+                : `${courseOptions.length} course${courseOptions.length !== 1 ? "s" : ""} available for ${semesterLabel(term)} — select a program to narrow further`
+              }
+            </p>
+          )}
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
@@ -510,6 +648,18 @@ export default function SemesterDetailPage() {
         confirmLabel="Delete"
         onConfirm={handleDelete}
         loading={deleting}
+      />
+
+      {/* Semester status CTA confirm */}
+      <ConfirmModal
+        open={!!semAction}
+        onOpenChange={(open) => !open && setSemAction(null)}
+        title={semActionMeta?.title ?? ""}
+        description={semActionMeta?.description ?? ""}
+        confirmLabel={semActionMeta?.confirmLabel ?? "Confirm"}
+        variant={semAction === "end" ? "destructive" : "default"}
+        onConfirm={handleSemesterAction}
+        loading={semActionLoading}
       />
     </div>
   )
