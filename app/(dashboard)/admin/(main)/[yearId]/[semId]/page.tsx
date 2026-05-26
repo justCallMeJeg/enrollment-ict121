@@ -137,7 +137,7 @@ export default function SemesterDetailPage() {
     [programs]
   )
 
-  // Filter courses by the current semester term AND the selected program
+  // Filter courses by semester term, selected program, and selected year level
   const courseOptions = useMemo(() => {
     const sem = (semesters as { id: string; term: string }[]).find((s) => s.id === semId)
     const semTerm = sem?.term
@@ -151,8 +151,11 @@ export default function SemesterDetailPage() {
         (c) => c.programs.length === 0 || c.programs.some((p) => p.id === form.program_id)
       )
     }
+    if (form.year_level) {
+      filtered = filtered.filter((c) => c.year_level === Number(form.year_level))
+    }
     return filtered.map((c) => ({ value: c.id, label: c.name, code: c.course_code }))
-  }, [courses, form.program_id, semesters, semId])
+  }, [courses, form.program_id, form.year_level, semesters, semId])
 
   const professorOptions = useMemo(
     () => professors.map((p: { user_id: string; faculty_id: string; users: { name: string } | { name: string }[] | null }) => {
@@ -270,6 +273,14 @@ export default function SemesterDetailPage() {
         program_id: programId,
         course_id: courseStillValid ? prev.course_id : "",
       }
+    })
+  }
+
+  function handleYearLevelChange(yearLevel: string) {
+    setForm((prev) => {
+      const course = (courses as unknown as CourseShape[]).find((c) => c.id === prev.course_id)
+      const courseStillValid = course && String(course.year_level) === yearLevel
+      return { ...prev, year_level: yearLevel, course_id: courseStillValid ? prev.course_id : "" }
     })
   }
 
@@ -563,7 +574,6 @@ export default function SemesterDetailPage() {
         submitLabel={editTarget ? "Save Changes" : "Create Classroom"}
         loading={loading}
       >
-        {/* Program first — course options are filtered by it */}
         <div className="space-y-2">
           <Label>Program <span className="text-destructive">*</span></Label>
           <Combobox
@@ -576,34 +586,10 @@ export default function SemesterDetailPage() {
             disabled={!!editTarget}
           />
         </div>
-        <div className="space-y-2">
-          <Label>Course <span className="text-destructive">*</span></Label>
-          <Combobox
-            options={courseOptions}
-            value={form.course_id}
-            onValueChange={handleCourseChange}
-            placeholder="Select a course…"
-            searchPlaceholder="Search courses…"
-            emptyText={
-              form.program_id
-                ? `No ${semesterLabel(term)} courses for this program.`
-                : `No ${semesterLabel(term)} courses found.`
-            }
-            disabled={!!editTarget}
-          />
-          {!editTarget && (
-            <p className="text-xs text-muted-foreground">
-              {form.program_id
-                ? `${courseOptions.length} course${courseOptions.length !== 1 ? "s" : ""} available for ${selectedProgram?.code ?? "this program"} · ${semesterLabel(term)}`
-                : `${courseOptions.length} course${courseOptions.length !== 1 ? "s" : ""} available for ${semesterLabel(term)} — select a program to narrow further`
-              }
-            </p>
-          )}
-        </div>
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label>Year Level <span className="text-destructive">*</span></Label>
-            <Select value={form.year_level} onValueChange={(v) => setForm((p) => ({ ...p, year_level: v }))} disabled={!!editTarget}>
+            <Select value={form.year_level} onValueChange={handleYearLevelChange} disabled={!!editTarget}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent position="popper">
                 {[1,2,3,4,5,6].map((y) => <SelectItem key={y} value={String(y)}>Year {y}</SelectItem>)}
@@ -624,6 +610,30 @@ export default function SemesterDetailPage() {
               {sectionPreview && <Badge variant="secondary" className="shrink-0 font-mono">{sectionPreview}</Badge>}
             </div>
           </div>
+        </div>
+        <div className="space-y-2">
+          <Label>Course <span className="text-destructive">*</span></Label>
+          <Combobox
+            options={courseOptions}
+            value={form.course_id}
+            onValueChange={handleCourseChange}
+            placeholder="Select a course…"
+            searchPlaceholder="Search courses…"
+            emptyText={
+              form.program_id
+                ? `No ${semesterLabel(term)} courses for this program.`
+                : `No ${semesterLabel(term)} courses found.`
+            }
+            disabled={!!editTarget}
+          />
+          {!editTarget && (
+            <p className="text-xs text-muted-foreground">
+              {form.program_id
+                ? `${courseOptions.length} course${courseOptions.length !== 1 ? "s" : ""} available for ${selectedProgram?.code ?? "this program"} · Year ${form.year_level} · ${semesterLabel(term)}`
+                : `${courseOptions.length} course${courseOptions.length !== 1 ? "s" : ""} available for Year ${form.year_level} · ${semesterLabel(term)} — select a program to narrow further`
+              }
+            </p>
+          )}
         </div>
         <div className="space-y-2">
           <Label>Professor <span className="text-xs text-muted-foreground font-normal">(optional)</span></Label>
