@@ -42,7 +42,7 @@ export default async function StudentDashboard() {
       .maybeSingle(),
     supabase
       .from("semesters")
-      .select("id, academic_years!inner(id, label)")
+      .select("id, term, academic_years!inner(id, label)")
       .eq("status", "pre_enrollment")
       .maybeSingle(),
     supabase
@@ -141,6 +141,10 @@ export default async function StudentDashboard() {
       : preEnrollSemester.academic_years
     : null
   const preEnrollYearLabel = (preEnrollYearData as { label: string } | null)?.label ?? ""
+  const preEnrollSemLabel = preEnrollSemester?.term
+    ? semesterLabel(preEnrollSemester.term as SemesterTerm)
+    : ""
+  const preEnrollPeriodLabel = [preEnrollYearLabel, preEnrollSemLabel].filter(Boolean).join(", ")
 
   return (
     <div className="space-y-6">
@@ -168,8 +172,8 @@ export default async function StudentDashboard() {
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-sm">
               {hasPreEnrolled
-                ? `${preEnrollCount} course${preEnrollCount !== 1 ? "s" : ""} pre-enrolled${preEnrollYearLabel ? ` for ${preEnrollYearLabel}` : ""}`
-                : `Pre-enrollment is open${preEnrollYearLabel ? ` for ${preEnrollYearLabel}` : ""}`}
+                ? `${preEnrollCount} course${preEnrollCount !== 1 ? "s" : ""} pre-enrolled${preEnrollPeriodLabel ? ` for ${preEnrollPeriodLabel}` : ""}`
+                : `Pre-enrollment is open${preEnrollPeriodLabel ? ` for ${preEnrollPeriodLabel}` : ""}`}
             </p>
             <p className="text-xs text-muted-foreground mt-0.5">
               {hasPreEnrolled
