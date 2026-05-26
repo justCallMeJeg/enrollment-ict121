@@ -213,6 +213,14 @@ export default function SemesterDetailPage() {
   const term = semester.term as SemesterTerm
   const status = semester.status as SemesterStatus
   const title = `${year.label} — ${semesterLabel(term)}`
+
+  const TERM_ORDER: Record<string, number> = { "1st": 0, "2nd": 1, midyear: 2 }
+  const sortedSems = [...semesters].sort(
+    (a: { term: string }, b: { term: string }) =>
+      (TERM_ORDER[a.term] ?? 99) - (TERM_ORDER[b.term] ?? 99)
+  )
+  const semIdx = sortedSems.findIndex((s: { id: string }) => s.id === semId)
+  const canOpenPreEnrollment = semIdx <= 0 || (sortedSems[semIdx - 1] as { status: string }).status === "ended"
   const otherYears = years.filter((y: { id: string }) => y.id !== yearId)
 
   const totalEnrolled = (classrooms as unknown as ClassroomRow[]).reduce((sum, c) => sum + c.enrolled_count, 0)
@@ -391,7 +399,7 @@ export default function SemesterDetailPage() {
           <Badge variant={STATUS_BADGE[status]} className="capitalize text-xs">
             {STATUS_LABEL[status]}
           </Badge>
-          {status === "draft" && (
+          {status === "draft" && canOpenPreEnrollment && (
             <Button size="sm" onClick={() => setSemAction("open")}>
               <BookOpen className="size-3.5 mr-1.5" />
               Open Pre-Enrollment
@@ -470,18 +478,20 @@ export default function SemesterDetailPage() {
           resultCount={filtered.length}
           totalCount={(classrooms as unknown as ClassroomRow[]).length}
           action={
-            <div className="flex gap-2">
-              {otherYears.length > 0 && (
-                <Button size="sm" variant="outline" onClick={() => setCopyModalOpen(true)}>
-                  <Copy className="size-4 mr-2" />
-                  Copy from Previous Year
+            status !== "ended" ? (
+              <div className="flex gap-2">
+                {otherYears.length > 0 && (
+                  <Button size="sm" variant="outline" onClick={() => setCopyModalOpen(true)}>
+                    <Copy className="size-4 mr-2" />
+                    Copy from Previous Year
+                  </Button>
+                )}
+                <Button size="sm" onClick={openCreate}>
+                  <Plus className="size-4 mr-2" />
+                  Add Classroom
                 </Button>
-              )}
-              <Button size="sm" onClick={openCreate}>
-                <Plus className="size-4 mr-2" />
-                Add Classroom
-              </Button>
-            </div>
+              </div>
+            ) : undefined
           }
         />
 
