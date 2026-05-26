@@ -2,8 +2,7 @@ import { getSupabaseServerClient } from "@/lib/supabase/server"
 import { headers } from "next/headers"
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { ChevronLeft, GraduationCap } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { ChevronLeft } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -23,7 +22,6 @@ export default async function ClassroomDetailPage({
   params: Promise<{ yearId: string; semId: string; classroomId: string }>
 }) {
   const { yearId, semId, classroomId } = await params
-  // Read x-user-id header to satisfy server component conventions (unused but kept for consistency)
   await headers()
 
   const supabase = await getSupabaseServerClient()
@@ -42,7 +40,11 @@ export default async function ClassroomDetailPage({
         .single(),
       supabase
         .from("enrollments")
-        .select("id, students!inner(student_id, users!inner(name))")
+        .select(`
+          id,
+          students!inner(student_id, users!inner(name)),
+          grades(grade, remarks)
+        `)
         .eq("classroom_id", classroomId)
         .eq("status", "enrolled")
         .order("created_at"),
@@ -73,6 +75,8 @@ export default async function ClassroomDetailPage({
     id: string
     studentId: string
     name: string
+    grade: number | null
+    remarks: string | null
   }
 
   const students: StudentRow[] = (enrollments ?? []).map((e) => {
@@ -80,10 +84,13 @@ export default async function ClassroomDetailPage({
     const user = student
       ? Array.isArray(student.users) ? student.users[0] : student.users
       : null
+    const gradeData = Array.isArray(e.grades) ? e.grades[0] : e.grades
     return {
       id: e.id,
       studentId: (student as { student_id?: string } | null)?.student_id ?? "—",
       name: (user as { name?: string } | null)?.name ?? "—",
+      grade: (gradeData as { grade?: number | null } | null)?.grade ?? null,
+      remarks: (gradeData as { remarks?: string | null } | null)?.remarks ?? null,
     }
   })
 
@@ -101,17 +108,9 @@ export default async function ClassroomDetailPage({
       </div>
 
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold font-mono">{(course as { course_code?: string } | null)?.course_code ?? "—"}</h1>
-          <p className="text-muted-foreground text-sm mt-0.5">{(course as { name?: string } | null)?.name ?? "—"}</p>
-        </div>
-        <Button asChild variant="outline" size="sm">
-          <Link href={`/admin/${yearId}/${semId}/classrooms/${classroomId}/grades`}>
-            <GraduationCap className="size-4 mr-2" />
-            View Grades
-          </Link>
-        </Button>
+      <div>
+        <h1 className="text-xl font-bold font-mono">{(course as { course_code?: string } | null)?.course_code ?? "—"}</h1>
+        <p className="text-muted-foreground text-sm mt-0.5">{(course as { name?: string } | null)?.name ?? "—"}</p>
       </div>
 
       {/* Stats */}
@@ -168,6 +167,8 @@ export default async function ClassroomDetailPage({
                 <TableRow>
                   <TableHead>Student ID</TableHead>
                   <TableHead>Name</TableHead>
+                  <TableHead className="text-right">Grade</TableHead>
+                  <TableHead>Remarks</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -175,6 +176,33 @@ export default async function ClassroomDetailPage({
                   <TableRow key={s.id}>
                     <TableCell className="font-mono text-sm">{s.studentId}</TableCell>
                     <TableCell>{s.name}</TableCell>
+                    <TableCell className={`text-right font-mono text-sm ${
+                      s.grade !== null
+                        ? s.grade <= 3.0
+                          ? "text-green-600 dark:text-green-400"
+                          : "text-destructive"
+                        : "text-muted-foreground"
+                    }`}>
+                      {s.grade !== null ? s.grade.toFixed(2) : "—"}
+                    </TableCell>
+                    <TableCell>
+                      {s.remarks ? (
+                        <Badge
+                          variant={
+                            s.remarks === "Passed"
+                              ? "default"
+                              : s.remarks === "Failed" || s.remarks === "Dropped"
+                              ? "destructive"
+                              : "secondary"
+                          }
+                          className="text-xs"
+                        >
+                          {s.remarks}
+                        </Badge>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">Pending</span>
+                      )}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
