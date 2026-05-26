@@ -4,6 +4,7 @@ import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/sonner"
 import { cn } from "@/lib/utils"
+import NextTopLoader from "nextjs-toploader"
 
 const robotoHeading = Roboto({ subsets: ["latin"], variable: "--font-heading" })
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
@@ -27,6 +28,7 @@ export default function RootLayout({
       )}
     >
       <body>
+        <NextTopLoader showSpinner={false} />
         <ThemeProvider>{children}</ThemeProvider>
         <Toaster />
       </body>
