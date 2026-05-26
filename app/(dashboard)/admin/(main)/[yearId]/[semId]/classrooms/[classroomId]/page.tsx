@@ -5,14 +5,8 @@ import { notFound } from "next/navigation"
 import { ChevronLeft } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
+import { ClassroomEnrollmentManager } from "@/components/admin/classroom-enrollment-manager"
+import type { StudentRow } from "@/components/admin/classroom-enrollment-manager"
 import { semesterLabel } from "@/types"
 import type { SemesterTerm } from "@/types"
 
@@ -41,15 +35,15 @@ export default async function ClassroomDetailPage({
       supabase
         .from("enrollments")
         .select(`
-          id,
+          id, status,
           students!inner(student_id, users!inner(name)),
           grades(grade, remarks)
         `)
         .eq("classroom_id", classroomId)
-        .eq("status", "enrolled")
+        .in("status", ["enrolled", "pre_enrolled"])
         .order("created_at"),
       supabase.from("academic_years").select("id, label").eq("id", yearId).single(),
-      supabase.from("semesters").select("id, term").eq("id", semId).single(),
+      supabase.from("semesters").select("id, term, status").eq("id", semId).single(),
     ])
 
   if (!classroom) notFound()
@@ -70,14 +64,7 @@ export default async function ClassroomDetailPage({
 
   const semLabel = semester?.term ? semesterLabel(semester.term as SemesterTerm) : ""
   const yearLabel = year?.label ?? ""
-
-  type StudentRow = {
-    id: string
-    studentId: string
-    name: string
-    grade: number | null
-    remarks: string | null
-  }
+  const isPreEnrollment = semester?.status === "pre_enrollment"
 
   const students: StudentRow[] = (enrollments ?? []).map((e) => {
     const student = Array.isArray(e.students) ? e.students[0] : e.students
@@ -89,6 +76,7 @@ export default async function ClassroomDetailPage({
       id: e.id,
       studentId: (student as { student_id?: string } | null)?.student_id ?? "—",
       name: (user as { name?: string } | null)?.name ?? "—",
+      status: e.status as "enrolled" | "pre_enrolled",
       grade: (gradeData as { grade?: number | null } | null)?.grade ?? null,
       remarks: (gradeData as { remarks?: string | null } | null)?.remarks ?? null,
     }
@@ -155,60 +143,11 @@ export default async function ClassroomDetailPage({
 
       {/* Enrolled students */}
       <div>
-        <h2 className="text-sm font-semibold mb-3">Enrolled Students</h2>
-        {students.length === 0 ? (
-          <p className="text-sm text-muted-foreground py-8 text-center border rounded-md">
-            No students enrolled in this classroom yet.
-          </p>
-        ) : (
-          <div className="rounded-md border overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Student ID</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead className="text-right">Grade</TableHead>
-                  <TableHead>Remarks</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {students.map((s) => (
-                  <TableRow key={s.id}>
-                    <TableCell className="font-mono text-sm">{s.studentId}</TableCell>
-                    <TableCell>{s.name}</TableCell>
-                    <TableCell className={`text-right font-mono text-sm ${
-                      s.grade !== null
-                        ? s.grade <= 3.0
-                          ? "text-green-600 dark:text-green-400"
-                          : "text-destructive"
-                        : "text-muted-foreground"
-                    }`}>
-                      {s.grade !== null ? s.grade.toFixed(2) : "—"}
-                    </TableCell>
-                    <TableCell>
-                      {s.remarks ? (
-                        <Badge
-                          variant={
-                            s.remarks === "Passed"
-                              ? "default"
-                              : s.remarks === "Failed" || s.remarks === "Dropped"
-                              ? "destructive"
-                              : "secondary"
-                          }
-                          className="text-xs"
-                        >
-                          {s.remarks}
-                        </Badge>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">Pending</span>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
+        <ClassroomEnrollmentManager
+          enrollments={students}
+          classroomId={classroomId}
+          isPreEnrollment={isPreEnrollment}
+        />
       </div>
     </div>
   )
