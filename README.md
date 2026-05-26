@@ -185,11 +185,14 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ### Default credentials
 
-| Role | Email | Password |
+| Role | Username | Password |
 |---|---|---|
 | Admin | `admin@isatu.edu.ph` | `admin123` |
-| Professor | `gimeno@isatu.edu.ph` | `prof123` |
-| Student | `gegerjohnpaul.gabayeron@students.isatu.edu.ph` | `student123` |
+| Professor | `GIM-0000-0` | `professor123` |
+| Student 1 | `2023-0172-A` | `student123` |
+| Student 2 | `2023-6428-I` | `student123` |
+| Student 3 | `2023-7006-A` | `student123` |
+| Student 4 | `2023-9204-I` | `student123` |
 
 ## Using Supabase Cloud Instead of Local
 
