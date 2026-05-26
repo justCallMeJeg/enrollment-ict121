@@ -50,7 +50,7 @@ export default async function ClassroomDetailPage({
 
   const course = Array.isArray(classroom.courses) ? classroom.courses[0] : classroom.courses
   const prog = Array.isArray(classroom.programs) ? classroom.programs[0] : classroom.programs
-  const professor = classroom.professors
+  const professor = Array.isArray(classroom.professors) ? classroom.professors[0] : classroom.professors
   const professorUser = professor
     ? Array.isArray(professor.users) ? professor.users[0] : professor.users
     : null
